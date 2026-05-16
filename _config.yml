@@ -1,0 +1,9 @@
+title: ibranibeny workshops
+description: Technical workshops and guides
+theme: minima
+markdown: kramdown
+plugins:
+  - jekyll-mermaid
+
+mermaid:
+  src: https://cdn.jsdelivr.net/npm/mermaid/dist/mermaid.min.js
