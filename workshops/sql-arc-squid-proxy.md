@@ -69,8 +69,9 @@ This creates:
 - VNet with proxy and SQL subnets
 - 3 VMs with NSGs (outbound restricted on SQL VMs)
 - Squid proxy configured with two ACL profiles
-- SQL Server installed on both SQL VMs
 - Arc connected machine agent configured with proxy
+
+> **Important**: The deploy script attempts to install SQL Server on both SQL VMs via `az vm run-command invoke`. This step can **fail silently** if the Squid proxy blocks `packages.microsoft.com` or `pmc-geofence.trafficmanager.net`. If SQL Server is not running after deployment, follow the [manual SQL Server installation](#manual-sql-server-installation) steps below.
 
 ### 2. Open inbound NSG rules
 
@@ -97,7 +98,26 @@ This SSHs into each VM and checks:
 - **vm-sqlA**: SQL Server running, Arc agent status
 - **vm-sqlB**: SQL Server running, Arc agent status
 
-### 5. Verify the Arc onboarding difference
+### 5. Verify SQL Server is installed
+
+Before checking Arc onboarding, confirm SQL Server is actually running on both VMs:
+
+```bash
+# On each SQL VM
+ssh azureuser@<vm-public-ip>
+systemctl status mssql-server
+```
+
+If the service is not found or not running, SQL Server was not installed during deployment. See [Manual SQL Server Installation](#manual-sql-server-installation) below.
+
+You can also verify from the Arc agent:
+
+```bash
+azcmagent show | grep "MSSQL Server Detected"
+# Expected: MSSQL Server Detected : true
+```
+
+### 6. Verify the Arc onboarding difference
 
 | | vm-sqlA (whitelisted) | vm-sqlB (blocked) |
 |---|---|---|
@@ -125,12 +145,101 @@ tail -100 /var/log/squid/access.log | grep -E "DENIED|arc|login"
 
 ---
 
+## Manual SQL Server Installation
+
+If the `deploy.sh` script's SQL Server installation failed (common when the proxy blocks package repository FQDNs), follow these steps on each SQL VM.
+
+> **Root cause**: The `packages.microsoft.com` repo uses a CDN that redirects through `pmc-geofence.trafficmanager.net`. If this domain is not whitelisted in Squid, `apt` cannot download the SQL Server packages.
+
+### 1. Add `.trafficmanager.net` to Squid whitelist
+
+SSH into `vm-squid` and add the domain to the `general_allowed` ACL in `/etc/squid/squid.conf`:
+
+```bash
+ssh azureuser@<squid-public-ip>
+sudo nano /etc/squid/squid.conf
+```
+
+Add `.trafficmanager.net` to the `general_allowed` ACL:
+
+```
+acl general_allowed dstdomain .ubuntu.com .canonical.com .microsoft.com .azure.com .windows.net .aka.ms .trafficmanager.net
+```
+
+Restart Squid:
+
+```bash
+sudo systemctl restart squid
+```
+
+### 2. Install SQL Server on each SQL VM
+
+SSH into each SQL VM (`vm-sqlA` and `vm-sqlB`) and run:
+
+```bash
+ssh azureuser@<sql-vm-public-ip>
+
+# Set proxy for apt
+export http_proxy="http://10.0.1.4:3128"
+export https_proxy="http://10.0.1.4:3128"
+
+# Import the Microsoft GPG key
+curl -fsSL https://packages.microsoft.com/keys/microsoft.asc | sudo gpg --dearmor -o /usr/share/keyrings/microsoft-prod.gpg
+
+# Register the SQL Server repo
+echo "deb [arch=amd64 signed-by=/usr/share/keyrings/microsoft-prod.gpg] https://packages.microsoft.com/ubuntu/22.04/mssql-server-2022 jammy main" | \
+  sudo tee /etc/apt/sources.list.d/mssql-server-2022.list
+
+# Install SQL Server
+sudo apt-get update
+sudo apt-get install -y mssql-server
+
+# Configure SQL Server (Developer edition, set SA password)
+sudo MSSQL_SA_PASSWORD='SqlP@ssw0rd2026!' \
+     MSSQL_PID='developer' \
+     ACCEPT_EULA='Y' \
+     /opt/mssql/bin/mssql-conf setup
+
+# Verify
+systemctl status mssql-server
+```
+
+### 3. Verify Arc detects SQL Server
+
+After SQL Server is installed and running, the Arc agent should detect it:
+
+```bash
+azcmagent show | grep "MSSQL Server Detected"
+# Expected: MSSQL Server Detected : true
+```
+
+If the `LinuxAgent.SqlServer` extension is not present or is stuck, you may need to recreate it:
+
+```bash
+# Delete stuck extension (run from your local machine)
+az connectedmachine extension delete \
+  --machine-name vm-sqlA \
+  -g sqlsquidproxy \
+  --name LinuxAgent.SqlServer \
+  --yes --no-wait
+
+# Wait a minute, then recreate
+az connectedmachine extension create \
+  --machine-name vm-sqlA \
+  -g sqlsquidproxy \
+  --name LinuxAgent.SqlServer \
+  --type LinuxAgent.SqlServer \
+  --publisher Microsoft.AzureData
+```
+
+---
+
 ## Azure Arc Required FQDNs
 
 These are the endpoints that must be whitelisted in the Squid proxy for a successful Arc onboarding in `southeastasia`:
 
 | FQDN | Purpose |
-|------|--------|
+|------|---------|
 | `login.microsoftonline.com` | Entra ID authentication |
 | `*.login.microsoft.com` | Entra ID authentication |
 | `pas.windows.net` | Entra ID authentication |
@@ -143,6 +252,7 @@ These are the endpoints that must be whitelisted in the Squid proxy for a succes
 | `*.southeastasia.arcdataservices.com` | Arc data processing (SQL) |
 | `download.microsoft.com` | Agent installation |
 | `packages.microsoft.com` | Agent installation |
+| `*.trafficmanager.net` | CDN redirect for packages.microsoft.com |
 | `www.microsoft.com/pkiops/certs` | Certificate updates |
 | `dc.services.visualstudio.com` | Telemetry (optional) |
 
@@ -161,6 +271,9 @@ These are the endpoints that must be whitelisted in the Squid proxy for a succes
 | SSL handshake errors | Squid may need `squid-openssl` package for ssl_bump |
 | vm-sqlA also failing | NSG may be blocking outbound to proxy subnet — check NSG rules |
 | iptables not redirecting | Ensure rules exclude proxy VM IP: `iptables -t nat -L` |
+| SQL Server not installed | `deploy.sh` install can fail silently if proxy blocks `packages.microsoft.com` or `pmc-geofence.trafficmanager.net`. Add `.trafficmanager.net` to Squid whitelist and install manually — see [Manual SQL Server Installation](#manual-sql-server-installation) |
+| Arc agent shows `MSSQL Server Detected: false` | SQL Server is not installed or not running. Install it first, then restart the Arc agent: `sudo azcmagent connect ...` or wait for the next heartbeat |
+| `LinuxAgent.SqlServer` extension stuck (null provisioningState) | Delete the extension with `--no-wait` flag and recreate it — see [Verify Arc detects SQL Server](#3-verify-arc-detects-sql-server) |
 
 ---
 
