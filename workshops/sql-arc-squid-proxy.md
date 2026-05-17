@@ -2,7 +2,7 @@
 layout: page
 title: "Workshop: SQL Server Arc Onboarding Behind Squid Proxy"
 description: "Simulate Azure Arc onboarding for SQL Server through a Squid transparent proxy with FQDN whitelisting"
-permalink: /workshops/sql-arc-squid-proxy/
+permalink: /SimulateSQLServerBehindSquidProxy/
 ---
 
 # SQL Server Arc Onboarding Behind Squid Proxy
