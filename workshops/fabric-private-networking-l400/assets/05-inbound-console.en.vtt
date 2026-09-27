@@ -1,0 +1,25 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:25.000
+Actual dedicated-console screen recording.
+Synthetic data only; this is not the Fabric portal.
+
+00:00:25.000 --> 00:00:52.000
+The authenticated external baseline returns HTTP 200 and 152 bytes.
+The script begins the isolated workspace's inbound policy change.
+
+00:00:52.000 --> 00:01:20.000
+Inbound Deny is requested; outbound Deny is preserved.
+Public GET still returns HTTP 200 during propagation.
+
+00:01:20.000 --> 00:01:30.000
+EDIT: 15 minutes 20 seconds of waiting omitted.
+Actual footage resumes at original source 16:40.
+
+00:01:30.000 --> 00:02:59.000
+The external request returns HTTP 403.
+A new private-VM upload is executing with managed identity.
+
+00:02:59.000 --> 00:03:03.600
+Private upload and readback pass: 152 bytes, 3 rows.
+Final policy: inbound Deny and outbound Deny.

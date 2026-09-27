@@ -1,0 +1,56 @@
+{
+  "provenance": "Read-only view rendered after cleanup from retained ARM verification records; not an original Azure portal screenshot.",
+  "verifiedAtUtc": "2026-09-27T03:31:16.9227785Z",
+  "resourceGroup": "rg-fabric-network-l400-20260927",
+  "region": "Indonesia Central",
+  "vm": {
+    "name": "vm-fabric-l400",
+    "size": "Standard_B2s",
+    "privateIp": "10.77.1.4",
+    "publicIp": null,
+    "securityType": "TrustedLaunch",
+    "diskGiB": 128,
+    "diskSku": "StandardSSD_LRS"
+  },
+  "network": {
+    "vnet": "vnet-fabric-l400",
+    "cidr": "10.77.0.0/16",
+    "peerings": 0,
+    "subnets": [
+      {
+        "name": "snet-client",
+        "cidr": "10.77.1.0/24",
+        "source": "saved deployed template"
+      },
+      {
+        "name": "snet-private-endpoints",
+        "cidr": "10.77.2.0/24",
+        "source": "saved deployed template"
+      },
+      {
+        "name": "AzureBastionSubnet",
+        "cidr": "10.77.3.0/26",
+        "source": "saved deployed template"
+      }
+    ],
+    "nat": "nat-fabric-l400",
+    "bastion": "bas-fabric-l400"
+  },
+  "sql": {
+    "name": "sql-fabric-net-l400-20260927",
+    "sku": "S0",
+    "privateIp": "10.77.2.4",
+    "publicNetworkAccess": "Disabled",
+    "entraOnly": true,
+    "connectionState": "Approved"
+  },
+  "deployment": {
+    "original": "Failed: SecurityRuleInvalidAccessType",
+    "completion": "Corrected platform Allow-rule destinations; direct ARM PUT only for missing resources. No repeated deployment.",
+    "recoveredState": "RecoveredSucceededAndVerified"
+  },
+  "cleanup": {
+    "resourceGroupAbsent": true,
+    "completedAtUtc": "2026-09-27T06:39:54.5923042Z"
+  }
+}

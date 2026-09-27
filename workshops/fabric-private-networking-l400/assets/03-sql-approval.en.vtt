@@ -1,0 +1,17 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:10.200
+[Silent actual screen capture; cropped and redacted.]
+The Fabric SQL connection is Pending. A separate customer PE is Approved.
+
+00:00:10.200 --> 00:00:15.700
+The pending connection is selected.
+The Approve connection confirmation dialog appears.
+
+00:00:15.700 --> 00:00:24.100
+After confirmation, the table still shows Pending.
+Long waits are trimmed; original elapsed time is in the footer.
+
+00:00:24.100 --> 00:00:32.015
+The connection now shows Approved.
+This confirms approval, not query execution or network enforcement.

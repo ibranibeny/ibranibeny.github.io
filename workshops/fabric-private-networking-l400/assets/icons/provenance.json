@@ -1,0 +1,34 @@
+{
+  "use": "Architecture diagrams and documentation",
+  "modifications": "None to the individual SVG icons; displayed at proportional sizes with nearby product labels.",
+  "azure": {
+    "guidance": "https://learn.microsoft.com/en-us/azure/architecture/icons/",
+    "archive": "https://arch-center.azureedge.net/icons/Azure_Public_Service_Icons_V24.zip",
+    "pack": "V24",
+    "files": {
+      "vm.svg": "compute/10021-icon-service-Virtual-Machine.svg",
+      "sql-database.svg": "databases/10130-icon-service-SQL-Database.svg",
+      "private-endpoint.svg": "other/02579-icon-service-Private-Endpoints.svg",
+      "private-link.svg": "networking/00427-icon-service-Private-Link.svg",
+      "vnet.svg": "networking/10061-icon-service-Virtual-Networks.svg",
+      "dns.svg": "networking/10064-icon-service-DNS-Zones.svg",
+      "bastion.svg": "networking/02422-icon-service-Bastions.svg",
+      "nat.svg": "networking/10310-icon-service-NAT.svg",
+      "managed-identity.svg": "identity/10227-icon-service-Entra-Managed-Identities.svg"
+    }
+  },
+  "fabric": {
+    "guidance": "https://learn.microsoft.com/en-us/fabric/fundamentals/icons",
+    "archive": "https://github.com/microsoft/fabric-samples/blob/main/docs-samples/Icons.zip",
+    "packageVersion": "6.1.0",
+    "files": {
+      "fabric.svg": "fabric_48_color.svg",
+      "onelake.svg": "one_lake_48_color.svg",
+      "data-engineering.svg": "data_engineering_48_color.svg",
+      "notebook.svg": "notebook_48_item.svg",
+      "lakehouse.svg": "lakehouse_48_item.svg",
+      "workspace.svg": "group_workspace_48_non-item.svg"
+    }
+  },
+  "scopeNote": "The Private Endpoint symbol is reused for the explicitly labeled Fabric-managed endpoint. The Private Link symbol denotes a Fabric-specific workspace resource, not a customer load-balancer-based Private Link Service."
+}

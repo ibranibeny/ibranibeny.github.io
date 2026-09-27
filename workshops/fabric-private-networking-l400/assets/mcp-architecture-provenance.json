@@ -1,0 +1,44 @@
+[
+  {
+    "server": {
+      "name": "Microsoft Learn MCP Server",
+      "version": "1.0.0"
+    },
+    "endpoint": "https://learn.microsoft.com/api/mcp",
+    "protocol": "2025-03-26",
+    "tool": "microsoft_docs_search",
+    "arguments": {
+      "query": "Microsoft Fabric inbound outbound private link workspace architecture managed private endpoints request direction"
+    },
+    "retrievedAtUtc": "2026-09-27T06:57:46.754594Z",
+    "resultIsError": false
+  },
+  {
+    "server": {
+      "name": "Microsoft Learn MCP Server",
+      "version": "1.0.0"
+    },
+    "endpoint": "https://learn.microsoft.com/api/mcp",
+    "protocol": "2025-03-26",
+    "tool": "microsoft_docs_fetch",
+    "arguments": {
+      "url": "https://learn.microsoft.com/en-us/fabric/security/security-workspace-level-private-links-overview"
+    },
+    "retrievedAtUtc": "2026-09-27T06:57:46.2754653Z",
+    "resultIsError": false
+  },
+  {
+    "server": {
+      "name": "Microsoft Learn MCP Server",
+      "version": "1.0.0"
+    },
+    "endpoint": "https://learn.microsoft.com/api/mcp",
+    "protocol": "2025-03-26",
+    "tool": "microsoft_docs_fetch",
+    "arguments": {
+      "url": "https://learn.microsoft.com/en-us/fabric/security/workspace-outbound-access-protection-overview"
+    },
+    "retrievedAtUtc": "2026-09-27T06:57:46.8373707Z",
+    "resultIsError": false
+  }
+]

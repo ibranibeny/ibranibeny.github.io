@@ -1,0 +1,1155 @@
+<!doctype html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Level 400 engineering guide to Microsoft Fabric workspace Private Link, outbound access protection, Spark managed private endpoints to Azure SQL, OneLake validation, and safe operations.">
+  <title>Fabric private networking | L400 engineering field guide</title>
+  <script>
+    (() => {
+      const param = new URLSearchParams(window.location.search).get("scoutTheme");
+      const theme =
+        param || (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light");
+      document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
+  <style>
+    :root {
+      color-scheme: light;
+      --cp-bg: #f7f4ef;
+      --cp-bg-elevated: #fcfbf8;
+      --cp-surface: #ffffff;
+      --cp-surface-soft: #f5f5f5;
+      --cp-border: #dedede;
+      --cp-border-strong: #919191;
+      --cp-text: #242424;
+      --cp-text-muted: #5c5c5c;
+      --cp-text-soft: #6f6f6f;
+      --cp-accent: #b11f4b;
+      --cp-accent-hover: #9a1a41;
+      --cp-accent-soft: rgba(177, 31, 75, 0.08);
+      --cp-accent-fg: #ffffff;
+      --cp-success: #16a34a;
+      --cp-danger: #dc2626;
+      --cp-warning: #f59e0b;
+      --cp-link: #0078d4;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.12);
+      --cp-overlay: rgba(255, 255, 255, 0.8);
+      --cp-panel: rgba(255, 255, 255, 0.86);
+      --cp-panel-strong: rgba(255, 255, 255, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.55);
+      --cp-highlight: rgba(177, 31, 75, 0.12);
+    }
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --cp-bg: #3d3b3a;
+      --cp-bg-elevated: #343231;
+      --cp-surface: #292929;
+      --cp-surface-soft: #2e2e2e;
+      --cp-border: #474747;
+      --cp-border-strong: #5f5f5f;
+      --cp-text: #dedede;
+      --cp-text-muted: #919191;
+      --cp-text-soft: #b0b0b0;
+      --cp-accent: #fd8ea1;
+      --cp-accent-hover: #fb7b91;
+      --cp-accent-soft: rgba(253, 142, 161, 0.14);
+      --cp-accent-fg: #1a1a1a;
+      --cp-success: #4ade80;
+      --cp-danger: #f87171;
+      --cp-warning: #fbbf24;
+      --cp-link: #4da6ff;
+      --cp-shadow: 0 18px 48px rgba(0, 0, 0, 0.32);
+      --cp-overlay: rgba(41, 41, 41, 0.88);
+      --cp-panel: rgba(41, 41, 41, 0.72);
+      --cp-panel-strong: rgba(41, 41, 41, 0.96);
+      --cp-sheen: rgba(255, 255, 255, 0.04);
+      --cp-highlight: rgba(253, 142, 161, 0.12);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; scroll-padding-top: 1.5rem; }
+    body { margin: 0; background: var(--cp-bg); color: var(--cp-text); font: 17px/1.7 "Segoe UI", Aptos, Calibri, -apple-system, BlinkMacSystemFont, sans-serif; }
+    a { color: var(--cp-link); text-underline-offset: .2em; overflow-wrap: anywhere; }
+    a:hover { color: var(--cp-accent-hover); }
+    a:focus-visible, button:focus-visible, summary:focus-visible { outline: 3px solid var(--cp-accent); outline-offset: 4px; }
+    .skip { position: absolute; left: 1rem; top: -5rem; padding: .5rem 1rem; background: var(--cp-surface); z-index: 10; }
+    .skip:focus { top: 1rem; }
+    .topline { padding: 1rem max(1.5rem, calc((100vw - 1400px) / 2)); display: flex; flex-wrap: wrap; gap: 1rem; justify-content: space-between; border-bottom: 1px solid var(--cp-border); background: var(--cp-bg-elevated); font-size: .88rem; }
+    .topline a { color: var(--cp-text); }
+    .eyebrow { color: var(--cp-accent); font-weight: 700; letter-spacing: .12em; text-transform: uppercase; font-size: .8rem; }
+    .hero { max-width: 1450px; padding: 4rem 2rem 3rem; margin: auto; }
+    h1 { max-width: 1050px; font-size: clamp(2.3rem, 4.5vw, 4rem); line-height: 1.1; letter-spacing: -.035em; margin: 1rem 0 1.5rem; }
+    .lede { max-width: 900px; font-size: 1.25rem; color: var(--cp-text-soft); line-height: 1.55; }
+    .meta { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1.5rem 0; }
+    .pill { display: inline-block; border: 1px solid var(--cp-border); border-radius: .625rem; padding: .25rem .75rem; font-size: .8rem; background: var(--cp-surface); }
+    .layout { display: grid; grid-template-columns: 255px minmax(0, 1fr); max-width: 1450px; margin: auto; padding: 0 2rem 4rem; gap: 3rem; align-items: start; }
+    .toc { position: sticky; top: 1.5rem; max-height: calc(100vh - 3rem); overflow-y: auto; padding-right: 1rem; font-size: .85rem; }
+    .toc h2 { font-size: .9rem; margin: 0 0 1rem; }
+    .toc ol { padding: 0; list-style: none; }
+    .toc li { margin-bottom: .65rem; }
+    .toc a { color: var(--cp-text-soft); text-decoration: none; }
+    .toc a:hover { color: var(--cp-accent); text-decoration: underline; }
+    main { min-width: 0; }
+    section { margin-bottom: 3.5rem; }
+    h2 { font-size: 1.85rem; letter-spacing: -.02em; line-height: 1.25; margin: 0 0 1.5rem; padding-top: 1rem; }
+    h3 { font-size: 1.25rem; line-height: 1.4; margin: 2rem 0 .75rem; }
+    h4 { font-size: 1rem; margin-bottom: .5rem; }
+    p, ul, ol { margin-top: 0; margin-bottom: 1rem; }
+    li { margin-bottom: .45rem; }
+    .chapter { display: block; font-size: .78rem; text-transform: uppercase; letter-spacing: .12em; color: var(--cp-accent); margin-bottom: .65rem; }
+    .callout { border-left: 4px solid var(--cp-accent); background: var(--cp-accent-soft); padding: 1.25rem 1.5rem; border-radius: 0 .625rem .625rem 0; margin: 1.5rem 0; }
+    .callout p:last-child, .card p:last-child { margin-bottom: 0; }
+    .warning { border-color: var(--cp-warning); background: var(--cp-surface); }
+    .cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1rem; margin: 1.5rem 0; }
+    .card { border: 1px solid var(--cp-border); border-radius: 16px; padding: 1.25rem; background: var(--cp-surface); }
+    .card h3 { margin-top: 0; }
+    .small { font-size: .88rem; color: var(--cp-text-soft); }
+    .table-wrap { overflow-x: auto; border: 1px solid var(--cp-border); border-radius: .625rem; margin: 1.25rem 0; }
+    table { border-collapse: collapse; width: 100%; font-size: .9rem; }
+    caption { text-align: left; padding: .8rem 1rem; font-weight: 700; background: var(--cp-surface); }
+    th, td { padding: .85rem 1rem; vertical-align: top; border-bottom: 1px solid var(--cp-border); text-align: left; }
+    th { background: var(--cp-surface-soft); font-weight: 650; }
+    td { background: var(--cp-surface); }
+    tr:last-child td { border-bottom: 0; }
+    code, pre { font-family: Consolas, "Courier New", Courier, monospace; }
+    code { font-size: .86em; background: var(--cp-surface-soft); padding: .1em .25em; border-radius: .25rem; overflow-wrap: anywhere; }
+    pre { background: var(--cp-surface); border: 1px solid var(--cp-border); border-radius: .625rem; padding: 1.25rem; overflow: auto; font-size: .82rem; line-height: 1.65; tab-size: 2; }
+    pre code { background: none; padding: 0; font-size: inherit; overflow-wrap: normal; }
+    figure { margin: 1.5rem 0; }
+    figcaption { color: var(--cp-text-soft); font-size: .85rem; margin-top: .7rem; }
+    .diagram-scroll { overflow-x: auto; border-radius: 16px; }
+    .architecture { width: 100%; min-width: 760px; height: auto; display: block; border: 1px solid var(--cp-border); border-radius: 16px; background: var(--cp-surface); }
+    .architecture text { fill: var(--cp-text); font-family: "Segoe UI", Aptos, Calibri, sans-serif; }
+    .architecture .zone { fill: var(--cp-bg-elevated); stroke: var(--cp-border-strong); stroke-dasharray: 7 5; }
+    .architecture .node { fill: var(--cp-surface); stroke: var(--cp-border-strong); }
+    .architecture .accent-node { fill: var(--cp-accent-soft); stroke: var(--cp-accent); }
+    .architecture .flow { fill: none; stroke: var(--cp-accent); stroke-width: 2.5; }
+    .architecture .secondary { fill: none; stroke: var(--cp-text-soft); stroke-width: 2; stroke-dasharray: 6 5; }
+    .architecture .arrow { fill: var(--cp-accent); }
+    .architecture .muted { fill: var(--cp-text-soft); }
+    .concept-route { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin: 16px 0; font-weight: 600; }
+    .concept-route span { display: inline-flex; align-items: center; gap: 8px; }
+    .concept-route img { width: 36px; height: 36px; object-fit: contain; }
+    .icon-legend { display: flex; flex-wrap: wrap; gap: 16px; padding: 12px 0; font-size: .85rem; }
+    .icon-legend span { display: inline-flex; align-items: center; gap: 8px; }
+    .icon-legend img { width: 28px; height: 28px; }
+    .evidence-slot { border: 1px dashed var(--cp-border-strong); border-radius: .625rem; padding: 1rem 1.25rem; background: var(--cp-bg-elevated); }
+    .evidence-slot strong { display: block; color: var(--cp-accent); margin-bottom: .25rem; }
+    .evidence-slot p { margin-bottom: .3rem; font-size: .9rem; }
+    .evidence-group { padding: 1.25rem; border: 1px solid var(--cp-border); border-radius: 16px; background: var(--cp-bg-elevated); margin: 1.5rem 0; }
+    .evidence-group h4 { margin-top: 0; }
+    .evidence-gallery { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 1.5rem; }
+    .evidence-gallery figure { margin: 0; min-width: 0; }
+    .evidence-gallery .wide { grid-column: 1 / -1; }
+    .evidence-image { display: block; max-width: 100%; width: auto; height: auto; border: 1px solid var(--cp-border); border-radius: .625rem; }
+    .evidence-gallery a { display: inline-block; max-width: 100%; }
+    .video-card { grid-column: 1 / -1; }
+    .video-figure { max-width: 760px; }
+    .evidence-video { display: block; width: 100%; max-width: 100%; height: auto; border: 1px solid var(--cp-border); border-radius: .625rem; background: #242424; }
+    @media (max-width: 900px) { .evidence-gallery { grid-template-columns: 1fr; } }
+    .status { font-weight: 650; white-space: nowrap; }
+    .status.pending { color: var(--cp-text-soft); }
+    .status.observed { color: var(--cp-accent); }
+    details { border: 1px solid var(--cp-border); border-radius: .625rem; padding: 1rem; margin: 1rem 0; background: var(--cp-surface); }
+    summary { font-weight: 650; cursor: pointer; }
+    details[open] summary { margin-bottom: 1rem; }
+    .sources li { margin-bottom: .8rem; font-size: .9rem; }
+    footer { border-top: 1px solid var(--cp-border); padding: 2rem; text-align: center; font-size: .85rem; color: var(--cp-text-soft); }
+    @media (max-width: 1050px) {
+      .layout { grid-template-columns: 1fr; gap: 1rem; }
+      .toc { position: static; max-height: none; border: 1px solid var(--cp-border); border-radius: 16px; padding: 1.25rem; background: var(--cp-surface); }
+      .toc ol { columns: 2; column-gap: 2rem; margin-bottom: 0; }
+      .toc li { break-inside: avoid; }
+    }
+    @media (max-width: 600px) {
+      body { font-size: 16px; }
+      .hero { padding: 2rem 1rem; }
+      .layout { padding: 0 1rem 2rem; }
+      .cards { grid-template-columns: 1fr; }
+      .toc ol { columns: 1; }
+      h2 { font-size: 1.6rem; }
+      .callout { padding: 1rem; }
+      pre { padding: .8rem; }
+      th, td { min-width: 135px; }
+    }
+    @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+    @media print {
+      html[data-theme] {
+        color-scheme: light;
+        --cp-bg: #f7f4ef;
+        --cp-bg-elevated: #fcfbf8;
+        --cp-surface: #ffffff;
+        --cp-surface-soft: #f5f5f5;
+        --cp-border: #dedede;
+        --cp-border-strong: #919191;
+        --cp-text: #242424;
+        --cp-text-soft: #6f6f6f;
+        --cp-accent: #b11f4b;
+        --cp-accent-soft: rgba(177, 31, 75, 0.08);
+        --cp-warning: #f59e0b;
+      }
+      body { background: var(--cp-bg); font-size: 10pt; line-height: 1.45; }
+      .topline, .toc, .skip { display: none; }
+      .hero { padding: 0 0 1rem; }
+      h1 { font-size: 28pt; }
+      .layout { display: block; padding: 0; }
+      h2 { font-size: 20pt; break-after: avoid; }
+      h3, h4 { break-after: avoid; }
+      .card, .callout, figure, pre { break-inside: avoid; }
+      .table-wrap { overflow: visible; }
+      .diagram-scroll { overflow: visible; }
+      .architecture { min-width: 0; }
+      .evidence-video { display: none; }
+      th, td { padding: .5rem; }
+      thead { display: table-header-group; }
+      tr { break-inside: avoid; }
+      pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+      a { color: var(--cp-text); }
+      .sources a::after { content: " (" attr(href) ")"; font-size: 8pt; }
+      @page { size: A4; margin: 16mm; }
+    }
+  </style>
+</head>
+<body>
+  <a class="skip" href="#guide">Skip to guide</a>
+  <div class="topline">
+    <a href="../../">Beny Ibrani · Technical workshops</a>
+    <span>Engineering field guide · Microsoft Fabric · Level 400</span>
+  </div>
+  <header class="hero">
+    <div class="eyebrow">Private transport. Explicit identity. Verifiable boundaries.</div>
+    <h1>Fabric inbound &amp; outbound<br>private networking</h1>
+    <p class="lede">Build two independent paths: a customer-network client into OneLake through workspace Private Link, and Fabric Spark out to an external Azure SQL Database through a managed private endpoint. Then prove what is allowed—and what is actually blocked.</p>
+    <div class="meta">
+      <span class="pill">Level 400</span>
+      <span class="pill">Reference date: 27 September 2026</span>
+      <span class="pill">Paid Fabric F capacity</span>
+      <span class="pill">Azure SQL → Spark → OneLake</span>
+      <span class="pill">Publication approved · 27 September 2026</span>
+    </div>
+    <div class="callout warning">
+      <p><strong>Evidence boundary:</strong> the tested inbound and outbound paths passed, and the temporary lab was subsequently removed. Public OneLake access returned HTTP 403 <code>DeniedByPolicy</code> while a new private VM upload/readback succeeded. The separate outbound test passed for private SQL/Delta and rejected one unapproved public destination. Sixteen original screenshots or recording-frame extracts, a newly rendered view of retained foundation evidence, and three reviewed recording excerpts are attached; missing original UI captures remain explicitly identified. Technical lab names, regions and settings are visible; only identity and opaque identifier fields are masked. Later credential-renewal and least-privilege-reader tests were not performed. This guide does not claim universal exfiltration prevention.</p>
+    </div>
+  </header>
+  <div class="layout">
+    <nav class="toc" aria-label="Table of contents">
+      <h2>Inside the guide</h2>
+      <ol>
+        <li><a href="#scope">01 · Scope and threat model</a></li>
+        <li><a href="#architecture">02 · Architecture and packet flow</a></li>
+        <li><a href="#support">03 · Workload support matrix</a></li>
+        <li><a href="#prerequisites">04 · Prerequisites and privilege</a></li>
+        <li><a href="#dns">05 · DNS, FQDNs, and identities</a></li>
+        <li><a href="#foundation">06 · Isolated lab foundation</a></li>
+        <li><a href="#inbound">07 · Workspace inbound setup</a></li>
+        <li><a href="#sql">08 · External Azure SQL setup</a></li>
+        <li><a href="#spark">09 · Spark outbound setup</a></li>
+        <li><a href="#policy">10 · Safe policy changes</a></li>
+        <li><a href="#validation">11 · Positive and negative tests</a></li>
+        <li><a href="#factory">12 · Data Factory alternative</a></li>
+        <li><a href="#onelake">13 · OneLake and cross-workspace</a></li>
+        <li><a href="#troubleshooting">14 · Troubleshooting by layer</a></li>
+        <li><a href="#operations">15 · Rollout, rollback, cleanup</a></li>
+        <li><a href="#cost">16 · Cost and residual billing</a></li>
+        <li><a href="#tenant">17 · Tenant-level appendix</a></li>
+        <li><a href="#evidence">18 · Execution evidence ledger</a></li>
+        <li><a href="#sources">19 · Official references</a></li>
+      </ol>
+    </nav>
+    <main id="guide">
+      <section id="scope">
+        <h2><span class="chapter">01 / Design intent</span>Start with the direction of the request</h2>
+        <p>“Private Fabric” is not a single switch. A client reading a file from OneLake initiates an <strong>inbound</strong> request to Fabric, even though the file bytes travel back to the client. A notebook reading Azure SQL initiates an <strong>outbound</strong> request from Fabric, even though the SQL rows travel into the workspace. Network policy follows the initiating workload and documented service operation, not the business description “ingest” or “export.” This distinction prevents a common error: treating outbound protection as a universal data-loss prevention control. <a href="#s-onelake-oap">[14]</a></p>
+        <p>This guide uses an intentionally small workload: three synthetic rows in an external Azure SQL Database, a Fabric notebook that reads those rows, and a Delta dataset written beneath the attached lakehouse’s <code>Files</code> area. Separately, a private Windows VM uploads a three-row CSV through the workspace-specific OneLake endpoint. Spark reads that CSV to demonstrate interoperability. OneLake supplies file storage; it does not connect to SQL and execute the query on its own.</p>
+        <div class="cards">
+          <article class="card">
+            <h3>Inbound concept: who can call Fabric?</h3>
+            <div class="concept-route"><span><img src="assets/icons/vm.svg" alt="Azure Virtual Machine">VM</span><span aria-hidden="true">→</span><span><img src="assets/icons/private-endpoint.svg" alt="Azure Private Endpoint">Private endpoint</span><span aria-hidden="true">→</span><span><img src="assets/icons/onelake.svg" alt="Microsoft OneLake">OneLake</span></div>
+            <p><strong>Connection initiator:</strong> a client outside Fabric. The customer creates a private endpoint in the client VNet, bound to the Fabric workspace's Private Link resource. The VM resolves the workspace-specific DFS hostname to the endpoint's private IP and sends an authenticated HTTPS request.</p>
+            <p><strong>Two separate controls:</strong> the endpoint supplies the private route; the workspace inbound policy excludes unwanted public routes. A private endpoint with public access still allowed is a dual-access configuration, not private-only access. Entra authentication and workspace/item permissions are still required.</p>
+            <p><strong>Boundary and scope:</strong> one workspace Private Link resource belongs to one workspace, but several customer VNets can each have an endpoint to it. That route does not automatically authorize a different workspace or create a reverse tunnel from Fabric into the VNet. <a href="#s-workspace-overview">[3]</a></p>
+          </article>
+          <article class="card">
+            <h3>Outbound concept: what can Fabric call?</h3>
+            <div class="concept-route"><span><img src="assets/icons/notebook.svg" alt="Fabric Notebook">Notebook</span><span aria-hidden="true">→</span><span><img src="assets/icons/private-endpoint.svg" alt="Private Endpoint symbol, Fabric-managed here">Managed endpoint</span><span aria-hidden="true">→</span><span><img src="assets/icons/sql-database.svg" alt="Azure SQL Database">Azure SQL</span></div>
+            <p><strong>Connection initiator:</strong> the Fabric workload. For this Spark scenario, Fabric creates and manages the endpoint in its own managed network. The SQL owner approves that endpoint request; Fabric shows both provisioning <code>Succeeded</code> and connection <code>Approved</code>.</p>
+            <p><strong>Two separate controls:</strong> the managed endpoint supplies approved private connectivity; workspace outbound protection applies deny-by-default to supported operations. An MPE alone does not establish that all other egress is blocked. SQL public access, TLS and SQL permissions remain separate controls.</p>
+            <p><strong>Workload-specific mechanism:</strong> Spark uses managed endpoint exceptions; Data Factory uses data connection/gateway rules. A customer VM's NAT, SQL private endpoint or DNS zone is not automatically the egress route for Fabric Spark. <a href="#s-oap-overview">[10]</a> <a href="#s-oap-engineering">[12]</a></p>
+          </article>
+        </div>
+        <div class="table-wrap"><table>
+          <caption>Network direction is not the direction in which the data bytes move</caption>
+          <thead><tr><th scope="col">Operation</th><th scope="col">Request initiator and classification</th><th scope="col">Data movement</th></tr></thead>
+          <tbody>
+            <tr><td>VM uploads a CSV to OneLake</td><td>VM → Fabric: <strong>inbound</strong></td><td>CSV bytes enter OneLake.</td></tr>
+            <tr><td>VM downloads that CSV</td><td>VM → Fabric GET: still <strong>inbound</strong></td><td>CSV bytes return to the VM. Outbound protection is not an inbound GET filter.</td></tr>
+            <tr><td>Notebook reads an Azure SQL table</td><td>Fabric Spark → SQL: <strong>outbound</strong></td><td>SQL rows return to Spark and are then written to OneLake.</td></tr>
+            <tr><td>Notebook writes to an external SQL table</td><td>Fabric Spark → SQL: also <strong>outbound</strong></td><td>Rows leave Spark on an authenticated SQL connection.</td></tr>
+          </tbody>
+        </table></div>
+        <p class="small"><strong>Concept provenance:</strong> the inbound and outbound architecture descriptions were refreshed on 27 September 2026 through the official <a href="https://learn.microsoft.com/en-us/training/support/mcp">Microsoft Learn MCP Server</a>. A real MCP client initialized the server, discovered its tools, called <code>microsoft_docs_search</code>, and fetched the two architecture articles with <code>microsoft_docs_fetch</code>. The diagram below is an original, labeled adaptation of those concepts using unmodified official Microsoft service icons.</p>
+        <p>A private endpoint establishes a private route to a particular service. It does not authenticate the caller, grant workspace access, create a SQL user, authorize table reads, or automatically disable a service’s public interface. Conversely, a valid token and table permission do not provide a route through a firewall. The acceptance criteria therefore separate DNS, transport, identity, authorization, and policy enforcement. <a href="#s-workspace-overview">[3]</a> <a href="#s-mpe-overview">[7]</a></p>
+        <p>The intended end state is workspace-scoped restriction, not tenant-wide lockdown. The tenant-level <em>Azure Private Link</em> and <em>Block public internet access</em> settings remain disabled in the observed lab. Two separately approved feature gates allow workspace administrators to configure inbound and outbound rules; enabling those gates does not itself apply a Deny rule to every workspace. Do not copy tenant-wide changes from the appendix into the main procedure.</p>
+        <p>Code examples use placeholders. Revised evidence images deliberately retain the disposable lab's resource names, region, SKU, private address ranges and actual status values so the configuration can be understood. Personal account labels, subscription identifiers and opaque GUIDs remain narrowly masked or omitted. No tokens or credentials are included. The page contains documentation, not deployment automation; reading it performs no Azure or Fabric operations.</p>
+      </section>
+
+      <section id="architecture">
+        <h2><span class="chapter">02 / Control planes and data planes</span>Two private paths, not one reverse tunnel</h2>
+        <figure>
+          <div class="diagram-scroll" tabindex="0" role="region" aria-label="Scrollable architecture diagram">
+          <svg class="architecture" viewBox="0 0 1200 1040" role="img" aria-labelledby="architecture-title architecture-description">
+            <title id="architecture-title">Workspace inbound Private Link and Spark outbound managed private endpoint to Azure SQL</title>
+            <desc id="architecture-description">Official Azure and Fabric icons show two independently controlled paths. A VM in the customer VNet reaches OneLake through a workspace-bound customer private endpoint. Fabric Spark in a separate managed VNet reaches external Azure SQL through a Fabric-managed private endpoint. A second customer SQL endpoint is used only for VM administration. The connection arrows and data-return arrows are labeled separately.</desc>
+            <defs><marker id="flow-arrow" markerWidth="8" markerHeight="8" refX="7" refY="4" orient="auto"><path class="arrow" d="M0 0 L8 4 L0 8 Z"/></marker></defs>
+            <text x="30" y="38" font-size="23" font-weight="700">Fabric private networking: inbound and outbound are separate boundaries</text>
+            <rect class="zone" x="25" y="70" width="350" height="650" rx="14"/>
+            <image href="assets/icons/vnet.svg" x="43" y="88" width="38" height="38"/>
+            <text x="93" y="111" font-size="18" font-weight="700">Customer Azure VNet</text>
+            <text class="muted" x="44" y="142" font-size="14">10.77.0.0/16 · isolated disposable lab</text>
+            <rect class="node" x="45" y="164" width="310" height="110" rx="10"/>
+            <image href="assets/icons/vm.svg" x="64" y="185" width="52" height="52"/>
+            <text x="132" y="199" font-size="18" font-weight="700">Windows VM</text>
+            <text x="132" y="225" font-size="14">B2s · no public IP</text>
+            <text x="132" y="249" font-size="14">System-assigned identity</text>
+            <path class="flow" d="M200 274 L200 303" marker-end="url(#flow-arrow)"/>
+            <rect class="accent-node" x="45" y="307" width="310" height="108" rx="10"/>
+            <image href="assets/icons/private-endpoint.svg" x="64" y="333" width="52" height="52"/>
+            <text x="132" y="340" font-size="17" font-weight="700">Fabric workspace PE</text>
+            <text x="132" y="365" font-size="14">Customer-managed endpoint</text>
+            <text x="132" y="390" font-size="14">Workspace DFS private DNS</text>
+            <rect class="node" x="45" y="449" width="310" height="100" rx="10"/>
+            <image href="assets/icons/private-endpoint.svg" x="64" y="469" width="48" height="48"/>
+            <text x="132" y="480" font-size="17" font-weight="700">SQL administrative PE</text>
+            <text x="132" y="505" font-size="14">VM → SQL seed / health test</text>
+            <text x="132" y="529" font-size="14">Not the Spark egress route</text>
+            <path class="secondary" d="M45 218 L35 218 L35 495 L45 495"/>
+            <image href="assets/icons/dns.svg" x="54" y="585" width="42" height="42"/>
+            <image href="assets/icons/bastion.svg" x="159" y="585" width="42" height="42"/>
+            <image href="assets/icons/nat.svg" x="265" y="585" width="42" height="42"/>
+            <text x="53" y="651" font-size="13">Private DNS</text>
+            <text x="156" y="651" font-size="13">Bastion</text>
+            <text x="265" y="651" font-size="13">NAT</text>
+            <text class="muted" x="48" y="685" font-size="13">Management services; not Fabric Spark controls</text>
+            <rect class="zone" x="465" y="70" width="710" height="650" rx="14"/>
+            <image href="assets/icons/fabric.svg" x="483" y="89" width="38" height="38"/>
+            <text x="536" y="113" font-size="19" font-weight="700">Microsoft Fabric workspace</text>
+            <rect class="accent-node" x="485" y="174" width="278" height="128" rx="10"/>
+            <image href="assets/icons/private-link.svg" x="503" y="194" width="46" height="46"/>
+            <text x="563" y="208" font-size="17" font-weight="700">Workspace Private Link</text>
+            <text x="563" y="233" font-size="14">Group: workspace</text>
+            <text x="507" y="277" font-size="13">Inbound policy + identity authorization</text>
+            <rect class="node" x="865" y="174" width="286" height="128" rx="10"/>
+            <image href="assets/icons/onelake.svg" x="884" y="194" width="46" height="46"/>
+            <image href="assets/icons/lakehouse.svg" x="1077" y="194" width="46" height="46"/>
+            <text x="945" y="216" font-size="18" font-weight="700">OneLake</text>
+            <text x="885" y="277" font-size="15">Lakehouse files: CSV and Delta</text>
+            <path class="flow" d="M355 360 L420 360 L420 238 L485 238" marker-end="url(#flow-arrow)"/>
+            <text x="392" y="184" font-size="14">1 · Inbound</text>
+            <text x="395" y="205" font-size="13">HTTPS 443</text>
+            <path class="flow" d="M763 238 L865 238" marker-end="url(#flow-arrow)"/>
+            <text class="muted" x="786" y="218" font-size="13">Upload</text>
+            <rect class="zone" x="485" y="384" width="666" height="295" rx="12"/>
+            <image href="assets/icons/vnet.svg" x="504" y="400" width="35" height="35"/>
+            <text x="553" y="426" font-size="18" font-weight="700">Fabric-managed network for Spark</text>
+            <rect class="accent-node" x="511" y="464" width="246" height="124" rx="10"/>
+            <image href="assets/icons/private-endpoint.svg" x="530" y="483" width="46" height="46"/>
+            <text x="590" y="495" font-size="17" font-weight="700">SQL managed PE</text>
+            <text x="590" y="520" font-size="13">Fabric-managed endpoint</text>
+            <text x="530" y="562" font-size="14">Succeeded + SQL owner Approved</text>
+            <rect class="accent-node" x="870" y="464" width="255" height="124" rx="10"/>
+            <image href="assets/icons/notebook.svg" x="890" y="483" width="48" height="48"/>
+            <text x="952" y="495" font-size="18" font-weight="700">Notebook</text>
+            <text x="952" y="520" font-size="14">Spark SQL connector</text>
+            <text x="891" y="562" font-size="14">OAP: deny other destinations</text>
+            <path class="flow" d="M870 510 L757 510" marker-end="url(#flow-arrow)"/>
+            <text x="783" y="488" font-size="14">2 · Query</text>
+            <path class="secondary" d="M757 551 L870 551" marker-end="url(#flow-arrow)"/>
+            <text class="muted" x="782" y="575" font-size="13">SQL rows</text>
+            <path class="flow" d="M1125 488 L1164 488 L1164 325 L1100 325 L1100 302" marker-end="url(#flow-arrow)"/>
+            <text x="1044" y="329" font-size="13">3 · Write</text>
+            <text x="1044" y="350" font-size="13">Delta files</text>
+            <text class="muted" x="510" y="624" font-size="14">Not peered to the customer VNet; client NAT is not inherited.</text>
+            <text class="muted" x="510" y="650" font-size="14">The notebook initiates SQL access. OneLake does not execute SQL here.</text>
+            <rect class="node" x="82" y="805" width="590" height="155" rx="12"/>
+            <image href="assets/icons/sql-database.svg" x="105" y="829" width="62" height="62"/>
+            <text x="190" y="840" font-size="20" font-weight="700">External Azure SQL Database</text>
+            <text x="190" y="868" font-size="15">&lt;server&gt;.database.windows.net · sqlServer subresource</text>
+            <text x="190" y="896" font-size="15">Public access Disabled · Entra-only · S0 lab database</text>
+            <text x="106" y="931" font-size="14">Use least-privilege SELECT in production; this lab ran as an Entra admin.</text>
+            <path class="flow" d="M511 554 L440 554 L440 758 L540 758 L540 805" marker-end="url(#flow-arrow)"/>
+            <text x="663" y="759" font-size="14">2 · Outbound SQL connection</text>
+            <path class="secondary" d="M45 499 L15 499 L15 772 L210 772 L210 805" marker-end="url(#flow-arrow)"/>
+            <text class="muted" x="82" y="791" font-size="13">Separate VM administration path</text>
+            <text x="30" y="994" font-size="14">Arrows show connection initiation or explicitly labeled data flow. Private transport is not authorization.</text>
+            <text class="muted" x="30" y="1019" font-size="13">Historical tested lab; removed after acceptance. Azure Private Endpoint symbol also denotes the labeled Fabric-managed PE.</text>
+          </svg>
+          </div>
+          <figcaption>On narrow screens, scroll horizontally. Concept refreshed through Microsoft Learn MCP; original layout with unmodified <a href="https://learn.microsoft.com/en-us/azure/architecture/icons/">official Azure icons</a> and <a href="https://learn.microsoft.com/en-us/fabric/fundamentals/icons">official Fabric icons</a>. The Private Link symbol represents the Fabric-specific workspace resource, not a customer-built load-balancer Private Link Service. Compare Microsoft's <a href="https://learn.microsoft.com/en-us/fabric/security/security-workspace-level-private-links-overview#workspace-level-private-link-overview">inbound architecture</a> and <a href="https://learn.microsoft.com/en-us/fabric/security/workspace-outbound-access-protection-overview#using-managed-private-endpoints-to-allow-outbound-access">outbound architecture</a>. Product icons remain Microsoft's property and are used under its architecture/documentation permissions. <a href="assets/fabric-private-networking-azure-icons.svg">Open the standalone SVG diagram</a>.</figcaption>
+        </figure>
+        <h3>Follow a OneLake upload</h3>
+        <ol>
+          <li>The VM obtains a Microsoft Entra token with the Storage audience. Its system-assigned managed identity must separately have the necessary Fabric authorization.</li>
+          <li>The VM resolver looks up the workspace-specific DFS hostname. Through the linked private DNS zone, the answer resolves to the Fabric private endpoint’s private address. Record the actual answer privately; public evidence should show only a sanitized private-address classification.</li>
+          <li>The VM opens TLS over TCP 443, preserving the service hostname for certificate verification. Azure Private Link delivers the request to the workspace service.</li>
+          <li>Fabric evaluates the supported operation, inbound network policy, token, and data permission. A successful write followed by a byte-for-byte readback is stronger evidence than a portal page loading.</li>
+        </ol>
+        <h3>Follow a SQL read from Spark</h3>
+        <ol>
+          <li>Spark runs in Fabric’s managed VNet. This is not VNet injection into the subnet that hosts your VM; your customer route table, DNS-zone link, and NAT gateway do not automatically govern the Spark cluster.</li>
+          <li>The notebook resolves the normal SQL logical-server hostname through Fabric-managed endpoint resolution. It does not use the customer VM’s SQL endpoint address.</li>
+          <li>The outbound request is permitted through an approved MPE to the SQL <code>sqlServer</code> subresource. Azure SQL validates Microsoft Entra authentication and database-level authorization.</li>
+          <li>Rows return on the established session. Spark then writes Delta files to its lakehouse. The SQL endpoint does not get an unsolicited reverse connection into Fabric or permission to read OneLake.</li>
+        </ol>
+        <p>Use SQL connection-policy-specific network requirements rather than declaring TCP 1433 the complete topology. The initial SQL handshake uses 1433; redirect configurations can require additional ports. Keep the official <a href="https://learn.microsoft.com/en-us/azure/azure-sql/database/private-endpoint-overview?view=azuresql">Azure SQL Private Link guidance</a> alongside your route and firewall review. Disabling TLS certificate validation to work around DNS is not an acceptable correction.</p>
+      </section>
+
+      <section id="support">
+        <h2><span class="chapter">03 / Scope-sensitive support</span>Supported does not mean every operation</h2>
+        <p>The support decision has at least three dimensions: item type, networking scope, and the operation or connector in use. A supported item in the workspace Private Link list does not imply it uses Spark managed private endpoints. An outbound-supported semantic model does not become supported behind workspace-level inbound Private Link. Validate the intersection required by your design. <a href="#s-workspace-support">[5]</a> <a href="#s-oap-overview">[10]</a></p>
+        <div class="table-wrap">
+          <table>
+            <caption>Networking support snapshot, 27 September 2026</caption>
+            <thead><tr><th scope="col">Workload / item</th><th scope="col">Workspace inbound Private Link</th><th scope="col">Outbound control / caveat</th></tr></thead>
+            <tbody>
+              <tr><td>Notebook, Spark job definition, Environment, Lakehouse</td><td>Listed as supported.</td><td>Data Engineering OAP uses approved MPEs only. Data connection rules do not grant arbitrary Spark egress.</td></tr>
+              <tr><td>Direct OneLake file access</td><td>Supported with workspace-specific FQDN.</td><td>Distinguish client-initiated requests, shortcuts, and server-side copy. OAP is not an inbound GET filter.</td></tr>
+              <tr><td>Warehouse and lakehouse SQL analytics endpoint</td><td>Listed as supported; obtain the workspace Private Link connection string.</td><td>OAP overview lists support with workload-specific constraints. Do not assume Spark MPE behavior applies to Warehouse SQL execution.</td></tr>
+              <tr><td>Data pipeline, Copy Job, Dataflow Gen2 with CI/CD</td><td>Listed as supported, with activity/staging limitations.</td><td>Data Factory uses data connection and gateway rules, not Spark MPEs. Check each activity and its connector.</td></tr>
+              <tr><td>Mounted Data Factory</td><td>Listed for workspace Private Link.</td><td>Do not infer outbound parity from that inbound listing. Validate the specific mounted workload separately.</td></tr>
+              <tr><td>ML experiment and ML model</td><td>Listed as supported.</td><td>OAP lists Data Science; notebook execution follows its applicable runtime restrictions.</td></tr>
+              <tr><td>Mirrored database, Eventstream, Eventhouse, Activator, Data Agent</td><td>Listed, subject to per-feature limitations.</td><td>Workload-specific OAP rules. The standalone MPE overview also lists Eventstream; that does not make every Eventstream source/destination private.</td></tr>
+              <tr><td>Power BI semantic model</td><td><strong>Not supported</strong> by workspace Private Link.</td><td>The current OAP overview lists semantic models. This is a different scope and is not permission to add one to the combined lab.</td></tr>
+              <tr><td>SQL database <em>in Fabric</em></td><td><strong>Not supported</strong> by workspace Private Link; tenant-level Private Link has different support.</td><td>Not the external Azure SQL Database used by this guide. The connector’s support for both products does not equal networking parity.</td></tr>
+              <tr><td>Deployment pipeline assignment</td><td><strong>Unsupported</strong> for an inbound-restricted workspace.</td><td>A deployment pipeline is an ALM feature, not a Data Factory data pipeline.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="callout warning">
+          <p><strong>Documentation conflicts must remain visible.</strong> The OneLake OAP article documents data connection rules for external targets, whereas the general connector-rules article directs OneLake users to MPEs. The MPE overview explicitly says OneLake shortcuts to external ADLS Gen2 and Blob Storage do not yet support MPE connectivity. Use the operation-specific guidance, preserve this limitation, and test the exact workload; do not advertise universal private shortcut support. <a href="#s-mpe-overview">[7]</a> <a href="#s-connector">[13]</a> <a href="#s-onelake-oap">[14]</a></p>
+        </div>
+        <p>Workspace inbound restriction can be blocked by unsupported items or deployment-pipeline membership; some unsupported items also prevent enabling the private-link scenario itself. The service can prevent new incompatible items after restriction. Inventory before changing policy, rather than deleting existing business items to make a lab work. Current pages also differ in how they describe historic default semantic models. A new, isolated workspace avoids depending on those migration details without pretending the historical limitations do not exist.</p>
+      </section>
+
+      <section id="prerequisites">
+        <h2><span class="chapter">04 / Before touching a toggle</span>Capacity, region, authority, and blast radius</h2>
+        <h3>Capacity and regional gates</h3>
+        <ul>
+          <li><strong>Workspace Private Link:</strong> assign the workspace to a paid Fabric F SKU. P SKUs and trial capacities are not supported for this feature. Confirm the workspace’s actual assignment, not simply that an F capacity exists somewhere in the tenant. <a href="#s-workspace-setup">[4]</a></li>
+          <li><strong>Outbound access protection:</strong> also requires an F capacity; F trials and other capacity types are excluded. This lab uses F4 as a small demonstration capacity, not as a production sizing recommendation. <a href="#s-oap-overview">[10]</a></li>
+          <li><strong>Standalone managed private endpoints:</strong> the MPE overview includes Fabric trial capacities. That narrower allowance does not override the paid-capacity prerequisites of the combined Private Link plus OAP scenario. <a href="#s-mpe-overview">[7]</a></li>
+          <li><strong>Two regional checks:</strong> both the tenant home region and assigned capacity region must support Fabric Data Engineering for MPE availability. Check the current regional availability page and any workload-specific exceptions. The managed-VNet page has older named-region restrictions; do not let a general availability statement silently override an explicit limitation. <a href="#s-regions">[19]</a> <a href="#s-vnet">[9]</a></li>
+          <li><strong>No relocation shortcut:</strong> the MPE overview does not support workspace migration across capacities in different regions. Choose an appropriate region before building endpoint dependencies.</li>
+        </ul>
+        <h3>Separate four administrative responsibilities</h3>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th scope="col">Principal</th><th scope="col">Minimum task boundary</th><th scope="col">Do not assume</th></tr></thead>
+            <tbody>
+              <tr><td>Fabric administrator</td><td>Approve and enable the workspace inbound/outbound configuration feature gates, scoped as permitted by each setting.</td><td>Tenant administration is not needed for daily SQL reads.</td></tr>
+              <tr><td>Workspace administrator</td><td>Manage communication policy, create MPEs, and assign workload access. Policy and MPE APIs require Admin and delegated <code>Workspace.ReadWrite.All</code> when using delegated permissions.</td><td>Workspace Admin is not an Azure subscription role.</td></tr>
+              <tr><td>Azure network/resource operator</td><td>Create only approved resources in the isolated resource group; link private DNS; configure PLS and PE; register required providers through separately authorized subscription operations.</td><td>Resource-group rights do not necessarily permit subscription provider registration or role assignments.</td></tr>
+              <tr><td>SQL data owner</td><td>Approve the correct SQL private endpoint request, configure Entra administration, seed synthetic data, and grant object-level read permission.</td><td>Approving a PE does not create a contained database user.</td></tr>
+              <tr><td>Runtime identity</td><td>Only the SQL SELECT and lakehouse read/write rights its workload requires. VM managed identity and notebook run identity are distinct principals.</td><td>Do not grant SQL <code>db_owner</code>, broad Azure Owner, or workspace Admin merely to solve a read error.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>For custom Azure roles, enumerate the actual resource operations required by your deployment rather than granting subscription-wide Owner for convenience. Include the separate permission to approve a private endpoint connection where appropriate. If a lab temporarily uses a broad Fabric write-capable workspace role because the chosen file-write workflow requires it, record that exception, isolate the workspace, and remove it after validation. Azure Storage RBAC on an unrelated storage account does not grant OneLake permissions. <a href="#s-onelake-api">[18]</a></p>
+        <h3>Provider and policy preflight</h3>
+        <p>The workspace Private Link setup instructs first-time users to re-register <code>Microsoft.Fabric</code> in subscriptions containing the workspace PLS and endpoint. OAP setup instructs re-registration of <code>Microsoft.Network</code>; MPE creation requires it registered. Perform these explicit administrative operations only with approval. Also check Azure Policy, allowed locations, quota, resource locks, DNS ownership, address availability, and whether organizational egress controls permit the portal and authentication dependencies of the operator VM. <a href="#s-workspace-setup">[4]</a> <a href="#s-oap-setup">[11]</a></p>
+        <div class="evidence-group" id="shot-01" data-evidence="screenshot-01">
+          <h4>Screenshot group 01 · Actual tenant feature-gate sequence</h4>
+          <p class="small">Cropped actual screenshots. Ready states contain unapplied changes; saved states are shown separately. These are configuration gates for workspace administrators, not evidence that workspace Deny rules are enforced. A region-eligibility screenshot was not captured for this edition.</p>
+          <div class="evidence-gallery">
+            <figure>
+              <a href="assets/01-inbound-gate-ready.png"><img class="evidence-image" src="assets/01-inbound-gate-ready.png" width="600" height="303" loading="lazy" decoding="async" alt="Inbound workspace configuration gate toggled to Enabled, with Unapplied changes and active Apply button."></a>
+              <figcaption>1a. Inbound configuration gate ready to apply. The visible <em>Unapplied changes</em> label means this frame is not the saved state.</figcaption>
+            </figure>
+            <figure>
+              <a href="assets/02-inbound-gate-saved.png"><img class="evidence-image" src="assets/02-inbound-gate-saved.png" width="600" height="303" loading="lazy" decoding="async" alt="Inbound workspace configuration gate saved as Enabled for the entire organization, with Apply disabled."></a>
+              <figcaption>1b. Inbound gate after saving. This allows workspace-level configuration; it does not turn on tenant Private Link.</figcaption>
+            </figure>
+            <figure>
+              <a href="assets/03-outbound-gate-ready.png"><img class="evidence-image" src="assets/03-outbound-gate-ready.png" width="600" height="269" loading="lazy" decoding="async" alt="Outbound workspace configuration gate toggled to Enabled, showing Unapplied changes and an active Apply button."></a>
+              <figcaption>1c. Outbound gate ready to apply, not yet saved in this frame.</figcaption>
+            </figure>
+            <figure>
+              <a href="assets/04-outbound-gate-saved.png"><img class="evidence-image" src="assets/04-outbound-gate-saved.png" width="600" height="269" loading="lazy" decoding="async" alt="Outbound workspace configuration gate saved as Enabled for the entire organization, with Apply disabled."></a>
+              <figcaption>1d. Outbound gate after saving. Workspace outbound policy must still be configured independently.</figcaption>
+            </figure>
+            <figure class="wide">
+              <a href="assets/05-tenant-gates-confirmed.png"><img class="evidence-image" src="assets/05-tenant-gates-confirmed.png" width="600" height="273" loading="lazy" decoding="async" alt="Advanced networking summary shows tenant Private Link and Block Public Internet Access disabled, with workspace inbound and outbound configuration gates enabled."></a>
+              <figcaption>1e. Confirmation of the intended scope: both workspace configuration gates enabled; tenant-level Private Link and tenant public blocking disabled. The crop excludes an unrelated existing firewall configuration gate.</figcaption>
+            </figure>
+          </div>
+        </div>
+      </section>
+
+      <section id="dns">
+        <h2><span class="chapter">05 / The contract at the hostname</span>DNS and resource IDs are not interchangeable</h2>
+        <div class="table-wrap">
+          <table>
+            <caption>Resource and naming contracts</caption>
+            <thead><tr><th scope="col">Purpose</th><th scope="col">Contract</th></tr></thead>
+            <tbody>
+              <tr><td>Workspace PLS</td><td><code>Microsoft.Fabric/privateLinkServicesForFabric</code>, ARM API <code>2024-06-01</code>, location <code>global</code>; properties <code>tenantId</code> and <code>workspaceId</code>; target group <code>workspace</code>.</td></tr>
+              <tr><td>Tenant PLS</td><td><code>Microsoft.PowerBI/privateLinkServicesForPowerBI</code>, ARM API <code>2020-06-01</code>; tenant target displayed as <code>Tenant</code>. Discover the actual API group ID; do not assume display-label casing.</td></tr>
+              <tr><td>Workspace private DNS</td><td><code>privatelink.fabric.microsoft.com</code>. Maintain generated endpoint records and the VNet link; do not replace the entire public Fabric DNS namespace.</td></tr>
+              <tr><td>Tenant private DNS</td><td><code>privatelink.analysis.windows.net</code>, <code>privatelink.pbidedicated.windows.net</code>, <code>privatelink.prod.powerquery.microsoft.com</code>.</td></tr>
+              <tr><td>Azure SQL MPE target</td><td><code>/subscriptions/&lt;subscription-id&gt;/resourceGroups/&lt;resource-group&gt;/providers/Microsoft.Sql/servers/&lt;server-name&gt;</code>; target subresource <code>sqlServer</code>. Do not append <code>/databases/...</code>.</td></tr>
+              <tr><td>VM-side Azure SQL private DNS</td><td><code>privatelink.database.windows.net</code>. Fabric manages the MPE-side resolution separately; a customer DNS-zone link alone does not configure Spark DNS.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Workspace private endpoint hostnames use the workspace GUID <strong>without hyphens</strong>, followed by <code>.z</code>, then its first two characters. The suffix chooses the service. GUIDs in the OneLake URL <strong>path retain their hyphens</strong>. Using the “cleaned” hostname identifier as the path identifier is a subtle but avoidable failure. <a href="#s-workspace-overview">[3]</a> <a href="#s-onelake-api">[18]</a></p>
+        <pre><code># Synthetic identifiers, not the lab's identifiers.
+$workspaceId = '12345678-1234-4234-8234-1234567890ab'
+$lakehouseId = '87654321-4321-4321-8321-ba0987654321'
+$compact = ([guid]$workspaceId).ToString('N')
+$prefix = $compact.Substring(0, 2)
+$apiHost = "$compact.z$prefix.w.api.fabric.microsoft.com"
+$dfsHost = "$compact.z$prefix.dfs.fabric.microsoft.com"
+$oneLakeFile = "https://$dfsHost/$workspaceId/$lakehouseId/Files/vm-baseline.csv"
+
+Resolve-DnsName $apiHost
+Resolve-DnsName $dfsHost
+Test-NetConnection $dfsHost -Port 443
+
+# Expected hostname shape:
+# 123456781234423482341234567890ab.z12.dfs.fabric.microsoft.com</code></pre>
+        <p>The other workspace suffixes include <code>c.fabric.microsoft.com</code>, <code>onelake.fabric.microsoft.com</code>, and <code>blob.fabric.microsoft.com</code>. These are not five interchangeable aliases for every API. Use the hostname appropriate to the service and supported operation. Warehouse and SQL analytics endpoints have a different connection-string shape; retrieve their service-provided workspace Private Link connection string rather than constructing one from an unrelated OneLake URL. <a href="#s-workspace-support">[5]</a></p>
+        <p>A linked private DNS zone supplies private answers only to clients using that resolution path. For hybrid networks, route DNS queries through the approved Azure resolver/forwarder and validate the applicable conditional-forwarding design. Test both a private client and a genuinely external client, without a VPN, private resolver, proxy, or cached answer that would invalidate the comparison. A zone for one workspace may cause unresolved names for another workspace unless documented DNS fallback behavior is configured. Fallback changes resolution, not authorization or network policy. <a href="#s-workspace-overview">[3]</a></p>
+        <h3>Three token audiences, three separate jobs</h3>
+        <ul>
+          <li><strong>Fabric REST:</strong> a token for the Fabric service, with the required delegated scope or supported application identity and Fabric permissions. The endpoint is <code>api.fabric.microsoft.com</code>, not Microsoft Graph.</li>
+          <li><strong>OneLake DFS/Blob:</strong> a Storage-audience token, conventionally <code>https://storage.azure.com/</code>. A Fabric management token is not a substitute. OneLake authorization still applies to the principal. <a href="#s-onelake-api">[18]</a></li>
+          <li><strong>Azure SQL:</strong> SQL-compatible Microsoft Entra authentication, with SQL’s <code>https://database.windows.net/</code> resource context. The documented Spark connector can obtain automatic Entra authentication for the signed-in execution context. Do not log the resulting token. <a href="#s-spark-sql">[16]</a></li>
+        </ul>
+        <p><code>notebookutils.credentials.getToken</code> documents specific audiences such as Storage, Power BI, Key Vault, and Kusto—not a general promise of SQL token acquisition. Do not invent a SQL audience alias. Direct MSAL or Azure Identity code that reaches the public Entra login endpoint is also not a safe fallback in a Spark session with OAP enabled: public login traffic is explicitly among the blocked examples. The preinstalled connector avoids an unnecessary package download, but authentication must still be validated under Deny. <a href="#s-notebook-credentials">[17]</a> <a href="#s-oap-engineering">[12]</a></p>
+      </section>
+
+      <section id="foundation">
+        <h2><span class="chapter">06 / Procedure A</span>Create an isolated, inspectable foundation</h2>
+        <h3>Step 1 — Declare the allowed change set</h3>
+        <p>Create a new resource group for the customer network and SQL resources. Record its ownership, region, expiry, intended SKUs, and cleanup plan. Use a new dedicated Fabric capacity and workspace rather than moving an existing business workspace or modifying its endpoints. Record the pre-change communication policy and feature-gate settings. Keep the approved lab identities and identifiers in private operational records, not in this site.</p>
+        <p>The customer network contains a VM subnet, a private-endpoint subnet with sufficient free addresses, and a correctly named <code>AzureBastionSubnet</code> sized for the selected Bastion SKU. A sample VNet address space is <code>10.40.0.0/16</code>; it is illustrative, not a prescription for a network that may overlap your environment. Reserve at least ten addresses per Fabric workspace endpoint: Microsoft currently creates five IP members per workspace-level Private Link, and explicitly recommends future headroom. Include normal Azure subnet address reservations in your sizing. <a href="#s-workspace-setup">[4]</a></p>
+        <h3>Step 2 — Deploy the client network without public VM exposure</h3>
+        <ol>
+          <li>In Azure, create the VNet and subnets in the selected resource group. Review address overlap and applicable network policies before creation.</li>
+          <li>Create the private Windows VM with no public IP and no public inbound ports. Enable its system-assigned managed identity for the OneLake test.</li>
+          <li>Deploy Bastion for administrative access. Use the current <a href="https://learn.microsoft.com/en-us/azure/bastion/bastion-nsg">Bastion NSG requirements</a> for the chosen SKU rather than copying arbitrary NSG service-tag expressions.</li>
+          <li>If the VM requires public outbound access for administration or dependencies, associate an explicitly approved NAT gateway. NAT provides source translation, not a destination allowlist; use the organization’s egress controls if destination restriction is required.</li>
+          <li>Review the resource group’s actual resources and each deployment operation. A portal form submission or partially successful ARM deployment is not a successful foundation.</li>
+        </ol>
+        <p>NSG rules must distinguish IP prefixes from supported service tags and obey platform restrictions. In the observed lab, the initial base ARM deployment failed because platform tags were misused. Corrected ordinary IP rules and completion of missing resources through ARM produced the later working foundation. That history must not be rewritten as an initially successful deployment. The repair is evidence of diagnosis, not a reusable instruction to bypass network controls.</p>
+        <figure id="shot-02" data-evidence="screenshot-02">
+          <a href="assets/02-foundation-retained-evidence.png"><img class="evidence-image" src="assets/02-foundation-retained-evidence.png" width="1240" loading="lazy" alt="Newly rendered retained-evidence view showing the actual lab VM with no public IP, VNet and subnet configuration, SQL private route, original deployment failure and successful recovery, followed by cleanup."></a>
+          <figcaption><strong>Screenshot 02 · Retained foundation evidence, rendered after cleanup.</strong> Shows actual saved ARM verification facts: VM without a public IP, private addresses, SKU, network names, subnet prefixes from the deployed template, the initial failure, recovered resources and subsequent deletion. It is a screenshot of the evidence report, <em>not the missing original Azure portal screenshot</em>. No lab was redeployed or UI success fabricated. <a href="assets/02-foundation-retained-evidence.json">Read the selected source facts</a>.</figcaption>
+        </figure>
+        <h3>Step 3 — Create and verify capacity, workspace, and lakehouse</h3>
+        <ol>
+          <li>Create the approved pay-as-you-go Fabric F capacity in the verified region. Leave reservations, autoscale, and paid overage features out of this small lab unless separately approved.</li>
+          <li>Wait for the capacity resource to exist and become available. Record its SKU and provisioning state; do not infer success from closing the creation blade.</li>
+          <li>In Fabric, create a dedicated workspace. Open <strong>Workspace settings → Workspace type</strong> or the current capacity-assignment blade and assign the new F capacity.</li>
+          <li>Create a lakehouse and a notebook in that workspace. Attach the lakehouse as the notebook’s default lakehouse. Inventory item types to ensure no unsupported semantic model or deployment-pipeline assignment is introduced.</li>
+        </ol>
+        <p>The observed capacity creation attempt in the portal did not create the resource; a later ARM deployment succeeded. Capture the resource that actually exists and label the sequence truthfully. A narrow baseline before Deny is reasonable for a synthetic, isolated lab, but it is a temporary testing state. Do not load sensitive production data while both public defaults remain Allow.</p>
+        <div class="evidence-group" id="shot-03" data-evidence="screenshot-03">
+          <h4>Screenshot group 03 · Actual setup forms; completion evidence remains partial</h4>
+          <p class="small">Small light-gray masks cover only the personal subscription label, administrator account and contact owner. Lab resource names, workspace and lakehouse names, region, F4 SKU, choices and descriptions remain visible. No status indicator was changed. These frames document choices and forms, not successful provisioning. The unsuccessful portal capacity attempt was followed by a successful ARM deployment; the original ARM success and final item-inventory portal screenshots were not captured.</p>
+          <div class="evidence-gallery">
+            <figure>
+              <a href="assets/06-capacity-basics-redacted.png"><img class="evidence-image" src="assets/06-capacity-basics-redacted.png" width="730" height="609" loading="lazy" decoding="async" alt="Actual Fabric capacity Basics form showing the lab capacity and resource group names, Indonesia Central, F4, and the West US 3 tenant-location notice; only personal subscription and account labels are hidden."></a>
+              <figcaption>3a. Actual capacity Basics form with F4 and Indonesia Central selected; the tenant-location notice remains readable. Only personal subscription/account labels are hidden. The form does not itself prove regional eligibility or creation success.</figcaption>
+            </figure>
+            <figure>
+              <a href="assets/07-capacity-review-redacted.png"><img class="evidence-image" src="assets/07-capacity-review-redacted.png" width="730" height="475" loading="lazy" decoding="async" alt="Redacted capacity Review form showing F4 and estimated monthly cost Unavailable."></a>
+              <figcaption>3b. Actual portal Review step. The estimate is visibly Unavailable. This portal attempt did not create the resource; do not treat it as the later ARM success evidence.</figcaption>
+            </figure>
+            <figure>
+              <a href="assets/08-workspace-form-redacted.png"><img class="evidence-image" src="assets/08-workspace-form-redacted.png" width="592" height="620" loading="lazy" decoding="async" alt="Actual workspace creation form showing Fabric-Network-L400 and its synthetic-data lab description; only the personal owner label is hidden."></a>
+              <figcaption>3c. Workspace creation form before completion. The lab name and description remain visible; only the contact owner's identity is hidden.</figcaption>
+            </figure>
+            <figure>
+              <a href="assets/10-lakehouse-form-redacted.png"><img class="evidence-image" src="assets/10-lakehouse-form-redacted.png" width="577" height="310" loading="lazy" decoding="async" alt="New Lakehouse dialog showing lh_network_l400 in Fabric-Network-L400, lakehouse schemas checked, and Create not enabled in this captured frame."></a>
+              <figcaption>3d. Actual New Lakehouse dialog, not the completed lakehouse inventory. The captured Create button is not enabled.</figcaption>
+            </figure>
+            <figure class="wide">
+              <a href="assets/09-workspace-capacity-selection.png"><img class="evidence-image" src="assets/09-workspace-capacity-selection.png" width="522" height="33" loading="lazy" decoding="async" alt="Workspace capacity dropdown showing fabricnetl40020260927 in Indonesia Central."></a>
+              <figcaption>3e. Actual selected-capacity dropdown crop. It documents the selection step only; a final saved-assignment screenshot was not captured for this edition.</figcaption>
+            </figure>
+          </div>
+          <p class="small">The capacity recording exists privately. The original workspace/lakehouse recording was lost; it must be re-recorded and labeled as such if a complete video sequence is provided.</p>
+        </div>
+      </section>
+
+      <section id="inbound">
+        <h2><span class="chapter">07 / Procedure B</span>Wire customer-network access into one workspace</h2>
+        <h3>Step 4 — Create the workspace private link service</h3>
+        <p>In Azure, open <strong>Deploy a custom template → Build your own template in the editor</strong>. Use the documented resource type and API version below within a valid ARM deployment template. The resource is global; that does not relocate the workspace or turn it into a globally available compute capacity. The properties bind the resource to the tenant and one workspace. Enable <strong>Show hidden resources</strong> if the PLS is not visible in the resource-group list. <a href="#s-workspace-setup">[4]</a></p>
+        <pre><code>{
+  "type": "Microsoft.Fabric/privateLinkServicesForFabric",
+  "apiVersion": "2024-06-01",
+  "name": "&lt;workspace-pls-name&gt;",
+  "location": "global",
+  "properties": {
+    "tenantId": "&lt;tenant-id&gt;",
+    "workspaceId": "&lt;workspace-id&gt;"
+  }
+}</code></pre>
+        <p>Check the resulting resource’s ID and provisioning state. Do not confuse this service-specific Fabric resource with a generic <code>Microsoft.Network/privateLinkServices</code> resource behind a customer load balancer. A workspace has its own PLS; multiple approved client VNets can have separate endpoints to that same workspace. A PLS for Workspace A is not a tunnel to Workspace B. <a href="#s-workspace-overview">[3]</a></p>
+        <figure class="evidence-slot" id="shot-04" data-evidence="screenshot-04">
+          <strong>Screenshot 04 · Not captured for this edition</strong>
+          <p>No reviewed screenshot of the workspace PLS resource type, global location, and successful provisioning is included. The procedure above describes the required configuration; it is not an image of executed state.</p>
+        </figure>
+        <h3>Step 5 — Create the customer private endpoint and DNS zone group</h3>
+        <ol>
+          <li>In Azure <strong>Private endpoints → Create</strong>, select the new resource group and the same region as the client VNet.</li>
+          <li>On <strong>Resource</strong>, select <code>Microsoft.Fabric/privateLinkServicesForFabric</code>, the new PLS, and target subresource <code>workspace</code>.</li>
+          <li>Select the approved private-endpoint subnet. Confirm available address headroom for the five current members and future growth.</li>
+          <li>Enable private DNS integration with <code>privatelink.fabric.microsoft.com</code>. Check the zone group, its generated records, and the VNet link after deployment.</li>
+          <li>Verify connection approval and provisioning, then inspect the NIC’s actual IP configurations. Do not hand-author only one DNS record because one initial test happens to work.</li>
+        </ol>
+        <p>A customer private endpoint’s IP address is a routing destination, not the application connection string. Use the normal documented workspace hostname over TLS. Do not connect to a raw IP or to a <code>privatelink</code> alias to evade certificate-name errors. If your network uses a custom DNS server, confirm it can resolve the Azure private zone through the approved forwarding path before continuing.</p>
+        <figure class="evidence-slot" id="shot-05" data-evidence="screenshot-05">
+          <strong>Screenshot 05 · Not captured for this edition</strong>
+          <p>No reviewed screenshot of the workspace PE target, approved connection, five IP configurations, DNS zone group, or linked VNet is included. The SQL endpoint images below are not substitutes for this distinct customer-network endpoint.</p>
+        </figure>
+        <h3>Step 6 — Validate a real OneLake write before restricting inbound</h3>
+        <p>Connect to the VM through Bastion. Run the FQDN algorithm in Chapter 05 using private local values and check both the workspace API and DFS answers. Obtain a Storage-audience token through the VM’s system-assigned managed identity using the supported identity mechanism in your chosen SDK or Azure tooling. Keep the token in memory; do not print it, copy it into browser developer tools, or store it in a screenshot.</p>
+        <p>Authorize that identity in the isolated Fabric workspace/lakehouse for the intended file operation. Use the OneLake-compatible DFS client to create <code>Files/vm-baseline.csv</code>, append the UTF-8 bytes at position zero, flush to the exact byte length, and read the file back. The request sequence below is a protocol sketch, not a token-bearing executable script. Parent directories must already exist or be created through the supported API. <a href="#s-onelake-api">[18]</a></p>
+        <pre><code>PUT https://&lt;workspace-dfs-host&gt;/&lt;workspace-id&gt;/&lt;lakehouse-id&gt;/Files/vm-baseline.csv?resource=file
+Authorization: Bearer &lt;in-memory-storage-audience-token&gt;
+x-ms-version: 2021-06-08
+
+PATCH https://&lt;workspace-dfs-host&gt;/&lt;workspace-id&gt;/&lt;lakehouse-id&gt;/Files/vm-baseline.csv?action=append&amp;position=0
+Content-Type: application/octet-stream
+Body: &lt;synthetic UTF-8 CSV bytes&gt;
+
+PATCH https://&lt;workspace-dfs-host&gt;/&lt;workspace-id&gt;/&lt;lakehouse-id&gt;/Files/vm-baseline.csv?action=flush&amp;position=&lt;byte-length&gt;
+
+GET https://&lt;workspace-dfs-host&gt;/&lt;workspace-id&gt;/&lt;lakehouse-id&gt;/Files/vm-baseline.csv
+
+# Supply the same required authentication/version headers on every request.
+# Compare SHA-256 of the source byte array with the downloaded byte array.</code></pre>
+        <p>Do not compare only the number of characters: UTF-8 byte length can differ. Record row count separately from header count, response status, and hash equality. The observed VM test uploaded 152 bytes containing three data rows, resolved a private address, and returned an identical readback hash. It ran <strong>before inbound Deny</strong>; therefore it proves the private route and identity worked, not that the public route was blocked.</p>
+        <figure class="evidence-slot" id="shot-06" data-evidence="screenshot-06">
+          <strong>Screenshot 06 · Not captured for this edition</strong>
+          <p>The VM baseline was verified: private resolution, successful transfer of 152 bytes with three rows, and identical upload/download hash. No reviewed baseline screenshot is included; the sanitized result is recorded in the execution ledger.</p>
+        </figure>
+      </section>
+
+      <section id="sql">
+        <h2><span class="chapter">08 / Procedure C</span>Prepare external Azure SQL without a public back door</h2>
+        <h3>Step 7 — Create the SQL server and administrative private route</h3>
+        <p>Create an Azure SQL logical server and a small database in the new resource group. Select the approved SQL service tier, configure Microsoft Entra administration, and enable Entra-only authentication for this design. Set the logical server’s <code>publicNetworkAccess</code> to <code>Disabled</code>. Do not add “allow Azure services” or a broad public firewall range to make a failed test pass. This SQL resource is external to Fabric and must not be confused with Fabric’s own SQL database item.</p>
+        <p>Create a second <em>customer</em> private endpoint to the SQL logical server, targeting <code>sqlServer</code>, with <code>privatelink.database.windows.net</code> DNS integration for the VM VNet. This endpoint exists for private SQL administration and VM-side tests. It does not satisfy Fabric Spark connectivity; the Fabric MPE in the next chapter is an independent connection. Verify SQL public network access remains disabled after creation.</p>
+        <figure class="evidence-slot" id="shot-07" data-evidence="screenshot-07">
+          <strong>Screenshot 07 · Not captured for this edition</strong>
+          <p>No reviewed image covering SQL public access Disabled, Entra-only authentication, and the VM-side SQL PE/DNS relationship is included. The subsequent approval recording shows private-connection approval only, not all these settings.</p>
+        </figure>
+        <h3>Step 8 — Seed three synthetic rows and authorize only a reader</h3>
+        <p>From the VM’s approved SQL client, connect using <code>&lt;server-name&gt;.database.windows.net</code>, encryption enabled, and certificate validation enabled. Verify the private DNS answer first. Connect to the intended database rather than assuming <code>master</code>. An authorized data owner can create the following disposable table; the notebook identity needs SELECT on that table, not SQL administrative ownership.</p>
+        <pre><code>-- Run once in the dedicated lab database as an authorized data owner.
+CREATE TABLE dbo.NetworkLabSample (
+    SampleId int NOT NULL PRIMARY KEY,
+    Category nvarchar(32) NOT NULL,
+    Quantity int NOT NULL
+);
+
+INSERT INTO dbo.NetworkLabSample (SampleId, Category, Quantity)
+VALUES (1, N'Synthetic-A', 10),
+       (2, N'Synthetic-B', 20),
+       (3, N'Synthetic-C', 30);
+
+-- Substitute the approved Microsoft Entra principal locally.
+CREATE USER [fabric-lab-reader] FROM EXTERNAL PROVIDER;
+GRANT SELECT ON OBJECT::dbo.NetworkLabSample TO [fabric-lab-reader];
+
+SELECT COUNT_BIG(*) AS ExpectedRows FROM dbo.NetworkLabSample;</code></pre>
+        <p>Resolve the exact execution identity before granting the user. The SQL data owner may need appropriate Microsoft Entra directory-resolution configuration to create an external principal; follow the official <a href="https://learn.microsoft.com/en-us/azure/azure-sql/database/authentication-aad-configure?view=azuresql">Azure SQL Entra configuration guide</a>, rather than expanding directory permissions blindly. Interactive notebook, scheduled job, API-triggered run, and service-principal execution can have different identity semantics. Capture the runtime mode in the test record and repeat authorization testing when it changes.</p>
+        <div class="callout warning"><p><strong>Actual lab privilege exception:</strong> the notebook executed as the demo user configured as the SQL server's Microsoft Entra administrator. A separate SELECT-only reader was not created or validated. The least-privilege example above is a recommended improvement, not an executed lab step. Administrative SQL rights are not required merely to read a table, and the connectivity pass does not prove least-privilege authorization.</p></div>
+        <figure class="evidence-slot" id="shot-08" data-evidence="screenshot-08">
+          <strong>Screenshot 08 · Not captured for this edition</strong>
+          <p>Three synthetic rows were seeded, but no reviewed seed-query or scoped SELECT-permission screenshot is included. Credentials and administrator identities are deliberately absent.</p>
+        </figure>
+      </section>
+
+      <section id="spark">
+        <h2><span class="chapter">09 / Procedure D</span>Fabric-managed egress to SQL</h2>
+        <h3>Step 9 — Request the Fabric-managed private endpoint</h3>
+        <p>Open <strong>Workspace settings → Network security</strong> or the current managed private endpoint blade. Select <strong>Create</strong>, provide a descriptive name, paste the SQL <em>logical server</em> resource ID, and select <code>sqlServer</code>. Add an approval request describing the isolated lab and exact target. Never point the resource ID at the database child, the customer SQL PE, or the customer NIC. <a href="#s-mpe-create">[8]</a></p>
+        <p>The equivalent documented Fabric REST shape is below. It requires workspace Admin; delegated callers need <code>Workspace.ReadWrite.All</code>. A service principal or managed identity is supported by this API, subject to Fabric identity configuration and authorization. The REST API creates the request; it does not approve it on the SQL owner’s behalf. <a href="#s-mpe-api">[23]</a></p>
+        <pre><code>POST https://api.fabric.microsoft.com/v1/workspaces/&lt;workspace-id&gt;/managedPrivateEndpoints
+Content-Type: application/json
+Authorization: Bearer &lt;in-memory-fabric-token&gt;
+
+{
+  "name": "mpe-lab-sql",
+  "targetPrivateLinkResourceId": "/subscriptions/&lt;subscription-id&gt;/resourceGroups/&lt;lab-rg&gt;/providers/Microsoft.Sql/servers/&lt;sql-server-name&gt;",
+  "targetSubresourceType": "sqlServer",
+  "requestMessage": "Approved isolated SQL-to-OneLake lab; reader access only."
+}</code></pre>
+        <h3>Step 10 — Approve the matching request at Azure SQL</h3>
+        <ol>
+          <li>As the authorized SQL resource owner, open the logical server’s <strong>Networking → Private access</strong> page.</li>
+          <li>Inspect the pending private endpoint connection. Match the intended request and target with your private change record; do not approve every pending request.</li>
+          <li>Approve the specific Fabric request and provide an appropriate justification.</li>
+          <li>Refresh the Fabric managed-endpoint view until both <code>provisioningState = Succeeded</code> and <code>connectionState.status = Approved</code> are present. A Succeeded provisioning state with Pending approval is not usable connectivity.</li>
+        </ol>
+        <p>The first managed-network Spark session can require a cold start. The managed-VNet documentation describes approximately three to five minutes for on-demand custom-pool startup after starter pools no longer apply. Treat that as an indicative startup interval, not an SLA. If endpoint creation actually fails, inspect the service error and documented support route; do not repeatedly delete and recreate during provisioning. After MPE deletion, the overview instructs waiting at least fifteen minutes before recreating one to the same target. <a href="#s-vnet">[9]</a> <a href="#s-mpe-overview">[7]</a></p>
+        <div class="evidence-group" id="shot-09" data-evidence="screenshot-09">
+          <h4>Screenshot group 09 · Actual SQL approval and Fabric endpoint state</h4>
+          <p class="small">Only opaque workspace and connection ID fragments are covered with narrow light-gray masks. The lab endpoint names, request description, buttons and status columns remain visible wherever they were visible in the source capture. The first three images are screenshots. The final image is an unmasked crop of the last actual outbound-protection recording frame; it contains the technical endpoint name but no personal account identity.</p>
+          <div class="evidence-gallery">
+            <figure>
+              <a href="assets/11-sql-request-pending.png"><img class="evidence-image" src="assets/11-sql-request-pending.png" width="627" height="362" loading="lazy" decoding="async" alt="Azure SQL private endpoint connection list with the new request Pending and the separate customer endpoint Approved; identifiers redacted."></a>
+              <figcaption>9a. SQL resource owner sees the new request Pending. The second, already approved row is the separate customer endpoint, not proof that the new Fabric request is approved.</figcaption>
+            </figure>
+            <figure>
+              <a href="assets/12-sql-approval-dialog.png"><img class="evidence-image" src="assets/12-sql-approval-dialog.png" width="656" height="185" loading="lazy" decoding="async" alt="Azure SQL Approve connection dialog with only workspace and connection GUID fragments hidden; the lab request message and Yes and No buttons remain visible."></a>
+              <figcaption>9b. Approval confirmation before selecting Yes. A confirmation dialog is not itself proof that the action completed.</figcaption>
+            </figure>
+            <figure>
+              <a href="assets/13-sql-request-approved.png"><img class="evidence-image" src="assets/13-sql-request-approved.png" width="627" height="362" loading="lazy" decoding="async" alt="Azure SQL private endpoint connection list showing both the newly approved request and the separate customer endpoint as Approved, with identifiers redacted."></a>
+              <figcaption>9c. SQL connection list after approval: the new request is Approved.</figcaption>
+            </figure>
+            <figure>
+              <a href="assets/14-fabric-mpe-state-actual-frame.png"><img class="evidence-image" src="assets/14-fabric-mpe-state-actual-frame.png" width="604" height="323" loading="lazy" decoding="async" alt="Actual recording frame of Fabric managed private endpoints showing mpe-sql-l400 with Activation Succeeded and Approval Approved, with no black masks."></a>
+              <figcaption>9d. Actual recording-frame crop: Fabric shows Activation Succeeded and Approval Approved. This validates configuration state, not SQL execution under outbound Deny.</figcaption>
+            </figure>
+          </div>
+        </div>
+        <h3>Step 11 — Run a private-path baseline with the preinstalled connector</h3>
+        <p>Attach the lakehouse to the notebook and start a fresh Spark session. The following example uses the documented preinstalled <code>.mssql</code> connector with automatic Microsoft Entra authentication. It deliberately supplies the URL on the read instead of relying on a cached default URL from a previous cell. It does not download a JDBC package, embed a password, or call a public OAuth endpoint itself. <a href="#s-spark-sql">[16]</a></p>
+        <pre><code>import socket
+import ipaddress
+import uuid
+import com.microsoft.sqlserver.jdbc.spark
+
+server = "&lt;sql-server-name&gt;.database.windows.net"
+database = "&lt;lab-database-name&gt;"
+addresses = {
+    item[4][0] for item in socket.getaddrinfo(
+        server, 1433, family=socket.AF_INET,
+        type=socket.SOCK_STREAM
+    )
+}
+private_ranges = [
+    ipaddress.ip_network("10.0.0.0/8"),
+    ipaddress.ip_network("172.16.0.0/12"),
+    ipaddress.ip_network("192.168.0.0/16"),
+]
+assert addresses, "SQL DNS returned no IPv4 addresses"
+assert all(
+    any(ipaddress.ip_address(address) in network
+        for network in private_ranges)
+    for address in addresses
+), "SQL did not resolve exclusively to RFC1918 addresses"
+with socket.create_connection((server, 1433), timeout=15):
+    pass
+print("SQL private DNS and initial TCP probe passed")
+
+url = (
+    f"jdbc:sqlserver://{server}:1433;"
+    f"database={database};"
+    "encrypt=true;trustServerCertificate=false;"
+    "loginTimeout=30;"
+)
+rows = spark.read.option("url", url).mssql("dbo.NetworkLabSample")
+expected = [(1, "Synthetic-A", 10),
+            (2, "Synthetic-B", 20),
+            (3, "Synthetic-C", 30)]
+actual = [
+    tuple(row) for row in
+    rows.select("SampleId", "Category", "Quantity")
+        .orderBy("SampleId").collect()
+]
+assert actual == expected, "SQL values did not match the synthetic seed"
+
+run_path = "Files/network-lab/sql-delta-" + uuid.uuid4().hex
+rows.write.format("delta").mode("errorifexists").save(run_path)
+check = spark.read.format("delta").load(run_path)
+assert check.count() == 3
+assert check.exceptAll(rows).count() == 0
+assert rows.exceptAll(check).count() == 0
+
+csv = (spark.read.option("header", "true")
+       .csv("Files/vm-baseline.csv"))
+assert csv.count() == 3
+print("PASS: SQL 3 rows; Delta values match; VM CSV 3 rows")</code></pre>
+        <p>This writes a Delta dataset beneath <code>Files</code>; it does not register a managed lakehouse table under <code>Tables</code>, and it does not promise automatic SQL analytics endpoint visibility. A unique run path avoids overwriting a prior result. For this three-row lab, collecting rows is deliberate; do not use driver-side <code>collect()</code> to validate production-size data.</p>
+        <p><strong>Example versus execution:</strong> the executed SQL baseline and OAP notebooks asserted three SQL rows and three Delta readback rows and displayed the rows. They did not execute the stronger tuple-value and <code>exceptAll</code> comparisons in this illustrative example. Byte-hash equality was independently checked for the VM-to-OneLake CSV upload.</p>
+        <p>A private DNS answer and a TCP probe alone are not enough: a driver-side socket does not exercise all executor behavior, SQL authorization, or result transfer. The materialized read, value assertions, Delta round-trip, and CSV read provide stronger workload evidence. The actual baseline notebook execution was <code>Completed</code> at <strong>04:19:58 UTC on 27 September 2026</strong>: private SQL DNS/TCP, automatic-Entra <code>.mssql</code> read of three rows, Delta write/read at <code>Files/sql-private-result</code>, and a three-row read of the VM-uploaded CSV all passed. The illustrative code above uses a unique Delta run path for safer repetition. The actual baseline was not a Deny-mode test.</p>
+        <div class="callout warning">
+          <p><strong>Documentation and execution are distinct:</strong> Microsoft documents automatic Entra authentication for this connector and external Azure SQL, but the reviewed connector article does not explicitly certify this exact authentication path under workspace OAP. A subsequent fresh notebook job did demonstrate that path successfully under outbound Deny with reported runtime build <code>3.5.5.5.4.20260807.1</code>. That is scoped runtime evidence, not a blanket support guarantee. A later run after normal credential renewal and validation in other execution modes remain pending. See the <a href="#strict-oap-result">strict OAP result</a>.</p>
+        </div>
+        <figure class="evidence-slot" id="shot-10" data-evidence="screenshot-10">
+          <strong>Screenshot 10 · Not captured for this edition</strong>
+          <p>The baseline job completed and passed private SQL DNS/TCP, three-row SQL and Delta checks, and the three-row VM CSV read. Its screenshot was not captured for this edition. This verified baseline preceded Deny and does not itself demonstrate enforcement.</p>
+        </figure>
+      </section>
+
+      <section id="policy">
+        <h2><span class="chapter">10 / Procedure E</span>Change policy without silently reopening the other direction</h2>
+        <p>The workspace network communication API is a <strong>Fabric REST API</strong>, not Microsoft Graph. Its <code>PUT</code> operation replaces the policy. Omitted settings revert to defaults, and an omitted <code>defaultAction</code> defaults to <code>Allow</code>. A one-direction example copied into a live workspace can therefore undo the restriction in the other direction. The API reference explicitly instructs callers to GET first and send the full policy. <a href="#s-policy-api">[21]</a></p>
+        <h3>Step 12 — Snapshot, merge, conditionally write, read back</h3>
+        <ol>
+          <li>Call <code>GET /v1/workspaces/&lt;workspace-id&gt;/networking/communicationPolicy</code>. Retain the complete current policy and ETag in the private change record.</li>
+          <li>Modify only the intended property in a copy. Preserve both <code>inbound</code> and <code>outbound</code> settings explicitly. Preserve applicable additional policy fields returned by the service according to the current schema.</li>
+          <li>Use <code>If-Match</code> with the quoted ETag in the PUT. If another administrator has changed the policy, stop, GET the new policy, and reconcile; do not automatically retry without concurrency protection.</li>
+          <li>GET again, compare the full response with the intended policy, and record the request time. Connector/gateway exception rules have their own APIs and should be independently snapshotted where applicable.</li>
+        </ol>
+        <pre><code>GET https://api.fabric.microsoft.com/v1/workspaces/&lt;workspace-id&gt;/networking/communicationPolicy
+Authorization: Bearer &lt;in-memory-fabric-token&gt;
+
+# Illustrative FINAL policy only.
+# Do not paste it over an existing policy without the GET / merge review.
+PUT https://api.fabric.microsoft.com/v1/workspaces/&lt;workspace-id&gt;/networking/communicationPolicy
+Authorization: Bearer &lt;in-memory-fabric-token&gt;
+Content-Type: application/json
+If-Match: "&lt;etag-from-latest-get&gt;"
+
+{
+  "inbound": {
+    "publicAccessRules": { "defaultAction": "Deny" }
+  },
+  "outbound": {
+    "publicAccessRules": { "defaultAction": "Deny" }
+  }
+}</code></pre>
+        <h3>Step 13 — Apply outbound restriction first and revalidate</h3>
+        <p>For a controlled migration from the baseline, set outbound <code>Deny</code> while preserving the inbound value you actually read. Alternatively, use the current workspace <strong>Outbound access protection → Block outbound public access</strong> control. Leave Git integration blocked unless an explicit business exception is approved. Wait for propagation; Microsoft documents up to fifteen minutes. End the earlier Spark session and run fresh positive and negative tests before proceeding. A preexisting TCP connection or cached token can conceal a new-session failure. <a href="#s-oap-setup">[11]</a></p>
+        <h3>Step 14 — Apply inbound restriction and compare two clients</h3>
+        <p>After the private VM route works, select the workspace’s inbound setting for connections from selected networks and workspace-level private links, or set inbound <code>Deny</code> through the full-policy API workflow. This private-only lab should not add public-IP exceptions. Preserve outbound <code>Deny</code>. Microsoft documents up to thirty minutes for inbound policy propagation. Record the last known public baseline and the first denied request after the policy change. <a href="#s-workspace-setup">[4]</a></p>
+        <p>There is a deliberate control-plane nuance: workspace network settings do not restrict the workspace communication-policy API in the same way they restrict supported workspace data operations. Tenant-level network restrictions still apply. The setup documentation also describes endpoint-specific access conditions. Plan the documented administrative recovery path in advance; do not use the policy API or a tenant admin API as the “public data access must fail” test. <a href="#s-workspace-support">[5]</a></p>
+        <div class="evidence-group" id="shot-11" data-evidence="screenshot-11">
+          <h4>Screenshot group 11 · Outbound setting On; strict run verified separately</h4>
+          <figure>
+            <a href="assets/15-outbound-on-actual-frame.png"><img class="evidence-image" src="assets/15-outbound-on-actual-frame.png" width="604" height="306" loading="lazy" decoding="async" alt="Actual recording-frame crop showing Block outbound public access On and Allow Git Integration Off, with the portal's fifteen-minute propagation notice."></a>
+            <figcaption>11a. Crop from the last actual frame of the outbound-protection recording. The UI shows public outbound blocking On and Git integration Off. No state was added or altered. This frame alone proves the setting, not enforcement; the separate strict run result is recorded below.</figcaption>
+          </figure>
+          <p class="small">The full communication policy was observed at 04:57:05 UTC with outbound Deny and inbound Allow, and the same values were confirmed after the strict job at 05:22:52 UTC. Full-policy and ETag-handling screenshots were not captured for this edition. Inbound restriction is not claimed by this frame.</p>
+        </div>
+      </section>
+
+      <section id="validation">
+        <h2><span class="chapter">11 / Acceptance, not assumption</span>Positive and negative test plan</h2>
+        <p>Run one change at a time and distinguish an <em>expected result</em> from an <em>observed result</em>. A test that fails for expired credentials is not evidence that a network restriction works. Use the same authorized principal, operation, workspace, and synthetic object when comparing private and public clients. Change the network context, not all variables simultaneously. Maintain full internal diagnostics but publish only sanitized outputs.</p>
+        <div class="table-wrap">
+          <table>
+            <caption>Required acceptance matrix</caption>
+            <thead><tr><th scope="col">Test</th><th scope="col">Method and expected result</th><th scope="col">Current evidence</th></tr></thead>
+            <tbody>
+              <tr><td>T01 · VM private baseline</td><td>Resolve workspace DFS privately; upload/read CSV; identical byte hash and three data rows.</td><td><span class="status observed">Observed</span><br>Before inbound Deny.</td></tr>
+              <tr><td>T01b · Public OneLake baseline</td><td>Before inbound Deny, GET the same CSV from the public client with the same valid credentials intended for the subsequent denied request.</td><td><span class="status observed">Passed baseline</span><br>HTTP 200, 152 bytes. Not an inbound-Deny result.</td></tr>
+              <tr><td>T02 · Spark private SQL baseline</td><td>Fresh baseline session; SQL private DNS/TCP; authenticated SQL read; three-row Delta and VM CSV validation.</td><td><span class="status observed">Observed</span><br>Before outbound Deny.</td></tr>
+              <tr><td>T03 · Allowed SQL after OAP</td><td>After more than fifteen minutes from observed outbound Deny, a fresh notebook job must read SQL privately with automatic Entra and validate the three-row Delta write/read.</td><td><span class="status observed">Passed, scoped</span><br>Fresh job Completed at 05:22:42 UTC; SQL and Delta assertions passed.</td></tr>
+              <tr><td>T04 · Blocked public Spark egress</td><td>Attempt a no-payload connection to a specific unapproved public destination from the fresh job. Record the destination, error layer, and policy context.</td><td><span class="status observed">Observed negative</span><br><code>www.microsoft.com:443</code> failed with network unreachable. One tested destination only.</td></tr>
+              <tr><td>T05 · Private OneLake after inbound Deny</td><td>From the VM, authorized read/write must still succeed after propagation.</td><td><span class="status observed">Passed</span><br>New private managed-identity upload: 152 bytes, three rows, identical readback at 05:57:05 UTC.</td></tr>
+              <tr><td>T06 · Public OneLake denied</td><td>Same valid identity and object from a genuinely public client must fail after propagation.</td><td><span class="status observed">Passed</span><br>Same external GET changed from HTTP 200 to HTTP 403 <code>DeniedByPolicy</code> at 05:56:27 UTC.</td></tr>
+              <tr><td>T07 · Unauthorized private identity</td><td>Private route with an otherwise valid but ungranted test identity must fail authorization. Network connectivity must not grant data access.</td><td><span class="status pending">Pending</span></td></tr>
+              <tr><td>T08 · SQL public path denied</td><td>Inspect publicNetworkAccess Disabled and attempt the authorized SQL operation from the approved public test context; it must not succeed over public transport.</td><td><span class="status pending">Pending</span></td></tr>
+              <tr><td>T09 · Fresh and later execution identity</td><td>Repeat T03 after normal credential/session renewal and in the intended job execution mode; verify the real SQL principal and permissions privately.</td><td><span class="status pending">Pending</span></td></tr>
+              <tr><td>T10 · Policy preservation</td><td>After each change, GET confirms the other direction remains unchanged; audit any separate exception rules independently.</td><td><span class="status observed">Direction preservation passed</span><br>Post-OAP: inbound Allow / outbound Deny. After inbound change: both Deny at 05:57:58 UTC. No comprehensive exception-rule audit is claimed.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3 id="strict-oap-result">Observed strict OAP result · 27 September 2026</h3>
+        <p>A fresh notebook job ran from <strong>05:19:15 to 05:22:42 UTC</strong> and finished <code>Completed</code> with no failure reason, using reported runtime build <code>3.5.5.5.4.20260807.1</code>. It started more than fifteen minutes after the recorded outbound-Deny observation. Private SQL DNS and initial TCP 1433 connectivity succeeded; the automatic Microsoft Entra SQL connector read three synthetic rows; and OneLake Delta write/read returned three rows. A connection attempt to the single unapproved public destination <code>www.microsoft.com:443</code> returned <code>connected=false</code> and <code>OSError: [Errno 101] Network is unreachable</code>.</p>
+        <p>The timestamped evidence was produced at <strong>05:22:37 UTC</strong>, within that exact job interval. Its 331-byte evidence file was retrieved from OneLake through the VM’s private path and hash-verified. A post-job full-policy read at <strong>05:22:52 UTC</strong> still showed <strong>inbound Allow / outbound Deny</strong>. Raw job/workspace identifiers, private IPs, and the original private evidence payload are intentionally not embedded here.</p>
+        <p><strong>Scope of the pass:</strong> this demonstrates the tested private SQL/Delta operation and the observed network rejection of one public destination in that job. It does not prove every destination, protocol, connector, identity mode, or exfiltration path is blocked. It is not inbound-Deny evidence. A pre-Deny reachability capture for that identical public destination is not attached, so the negative result is reported as the observed network rejection rather than as a complete before/after public reachability comparison.</p>
+        <p>For a reusable T04 test, do not upload sample business data to a public endpoint merely to test exfiltration. Prefer a no-payload request to an endpoint you control, and record a successful pre-Deny baseline so DNS failure, service downtime, or a nonexistent hostname does not become a false pass. Bound the connection/read timeout and capture the error category. Do not turn off TLS verification. For a target-specific MPE negative test, use an independently approved test resource or a maintenance window; avoid deleting the only working SQL MPE just to manufacture a failure.</p>
+        <h3 id="strict-inbound-result">Observed inbound result · 27 September 2026</h3>
+        <p>The external client read the same synthetic CSV with its Storage-audience user token: <strong>HTTP 200, 152 bytes at 05:40:11 UTC</strong>. The full-policy update requested inbound Deny at <strong>05:40:39 UTC</strong>, preserving outbound Deny and using the returned ETag when present. The same authenticated external GET first returned <strong>HTTP 403 at 05:56:27 UTC</strong>, with service code <code>DeniedByPolicy</code> and message <code>Private link validation failed due to DeniedByPolicy</code>. The observed propagation interval was approximately 15 minutes 48 seconds; it is not a guaranteed service interval.</p>
+        <p>At <strong>05:57:05 UTC</strong>, the VM executed a new upload through the private workspace DFS endpoint using its system-assigned managed identity. The file contained <strong>152 bytes and three data rows</strong>, and the downloaded bytes matched the source hash. A final policy read at <strong>05:57:58 UTC</strong> returned <strong>inbound Deny / outbound Deny</strong>. The public before/after comparison used the same user token and object; the separate private upload used the explicitly authorized VM identity. These are not represented as the same principal.</p>
+        <p>The tests were sequential: the strict SQL/OAP job ran while inbound was Allow; the later inbound proof ran with both directions set to Deny. The SQL notebook was not rerun after inbound Deny. The general Fabric portal shell and documented control-plane endpoints can remain reachable; neither is a substitute for the data-plane test. A generic 403 alone is insufficient: this run recorded the explicit network-policy error and a working private data path.</p>
+        <p>Each test record should include the UTC timestamp, policy readback timestamp, client location classification, token audience (not token contents), principal role category, operation, expected outcome, actual status/error, row/byte counts where applicable, and an asset identifier. If a request contains a workspace or subscription GUID, keep the full request only in the private record and publish a consistently sanitized equivalent.</p>
+        <figure id="shot-12" data-evidence="screenshot-12">
+          <a href="assets/16-inbound-final-actual-frame.png"><img class="evidence-image" src="assets/16-inbound-final-actual-frame.png" width="960" height="480" loading="lazy" alt="Actual console recording frame showing public HTTP 403, successful private upload and readback, and final inbound Deny and outbound Deny."></a>
+          <figcaption>Screenshot 12. Extracted from the actual dedicated-console recording. Earlier public HTTP 200 responses remain visible above the first 403, followed by the real private upload result. This is a test-console capture, not a Fabric portal screen or simulated output. <a href="#video-validation">Watch the recorded execution</a>.</figcaption>
+        </figure>
+        <figure class="evidence-slot" id="shot-13" data-evidence="screenshot-13">
+          <strong>Screenshot 13 · Strict run verified; screenshot not captured</strong>
+          <p>The strict job passed the private SQL/Delta checks and rejected the single public TCP destination as summarized above. No reviewed run/output screenshot is included. No replacement screenshot or simulated output is used.</p>
+        </figure>
+      </section>
+
+      <section id="factory">
+        <h2><span class="chapter">12 / Alternative architecture</span>Data Factory uses connection and gateway rules</h2>
+        <p>If the requirement is a Data Factory pipeline, Copy Job, or Dataflow Gen2 rather than Spark code, design a different outbound route. Microsoft’s Data Factory OAP article explicitly states that managed private endpoints are not the allowlist mechanism for Data Factory workloads. Configuring the Spark SQL MPE does not make a Copy activity’s cloud SQL connection private. <a href="#s-oap-factory">[15]</a></p>
+        <ol>
+          <li><strong>Choose the supported runtime path.</strong> For a SQL server with public access disabled, use a connector-supported virtual network data gateway or on-premises data gateway with a real private route and correct DNS to SQL. Verify current connector, authentication, capacity, region, and gateway compatibility before deploying anything.</li>
+          <li><strong>Verify the gateway route independently.</strong> A gateway hosted in or connected to the customer network needs SQL private endpoint resolution, network reachability, and its own SQL identity. It does not inherit the notebook’s managed endpoint or its user token.</li>
+          <li><strong>Create the actual connection.</strong> In <strong>Manage connections and gateways</strong>, bind the supported SQL connector to the intended gateway and database with the approved credential method. Test the connection before using it in an activity.</li>
+          <li><strong>Enable OAP and configure narrow rules.</strong> For endpoint-granular cloud connectors, keep the connector category Blocked and add only the required endpoint exception. Setting SQL Server broadly Allowed can allow all SQL Server endpoints, not just your lab server.</li>
+          <li><strong>For gateway rules, permit only the approved gateway.</strong> An allowed gateway can reach the sources accessible through that gateway. This is broader than a per-table rule, so constrain gateway membership, connection permissions, network routes, and SQL authorization separately.</li>
+          <li><strong>Bind the activity to the verified connection.</strong> Run a synthetic copy and a negative test with a nonapproved destination. Check every activity; Teams and Outlook activities, internal workspace staging, and certain cross-workspace destinations have documented limitations.</li>
+        </ol>
+        <div class="callout">
+          <p><strong>Allowlisting is permission, not transport.</strong> A cloud connector rule can allow a destination while that connection still uses a public endpoint. Only a correctly selected private network/gateway path plus target-side network configuration makes the SQL connection private. Neither a rule nor a gateway grants SQL SELECT by itself.</p>
+        </div>
+        <p>The Fabric portal does not currently support configuring data connection rules when Private Link is enabled at either the tenant or workspace scope. Use the documented <a href="https://learn.microsoft.com/en-us/rest/api/fabric/core/workspaces/get-outbound-cloud-connection-rules">Get Outbound Cloud Connection Rules</a>, <a href="https://learn.microsoft.com/en-us/rest/api/fabric/core/workspaces/set-outbound-cloud-connection-rules">Set Outbound Cloud Connection Rules</a>, <a href="https://learn.microsoft.com/en-us/rest/api/fabric/core/workspaces/get-outbound-gateway-rules">Get Outbound Gateway Rules</a>, and <a href="https://learn.microsoft.com/en-us/rest/api/fabric/core/workspaces/set-outbound-gateway-rules">Set Outbound Gateway Rules</a> APIs as appropriate. Read each current schema and preserve existing rules; these are separate from the communication-policy document. <a href="#s-oap-overview">[10]</a> <a href="#s-connector">[13]</a></p>
+        <p>This guide does not claim the gateway alternative was deployed or tested. It is an architecture branch with additional infrastructure and billing considerations, not a hidden dependency of the demonstrated notebook route. Do not add a gateway or storage staging resource to the lab merely because the original workload used Spark successfully.</p>
+        <figure class="evidence-slot" id="shot-14" data-evidence="screenshot-14">
+          <strong>Screenshot 14 · Not captured; alternative not executed</strong>
+          <p>The optional gateway-backed connection and connector-rule branch was not executed. There are no corresponding positive/negative activity screenshots; the Spark MPE evidence does not validate this alternative.</p>
+        </figure>
+      </section>
+
+      <section id="onelake">
+        <h2><span class="chapter">13 / Beyond the first workspace</span>OneLake operation semantics change the threat model</h2>
+        <p>For a notebook accessing its attached lakehouse, relative <code>Files/...</code> paths avoid fragile friendly-name resolution. For cross-workspace paths, use workspace and item GUIDs as documented, and separately configure the source-to-destination networking relationship. A path string alone is not an allow rule. Cross-workspace MPE communication requires the appropriate target workspace Private Link service and approval; verify current same-tenant and regional constraints in the cross-workspace documentation. <a href="#s-cross">[20]</a> <a href="#s-oap-engineering">[12]</a></p>
+        <pre><code># Documented GUID-based cross-workspace path shape.
+# Requires independently validated network and data permissions.
+abfss://&lt;workspace-id&gt;@onelake.dfs.fabric.microsoft.com/&lt;lakehouse-id&gt;/Files/sample.csv</code></pre>
+        <p>The global GUID-based path above is the form shown in the Data Engineering OAP article. For an <strong>inbound-restricted target workspace</strong>, the cross-workspace article explicitly requires the target workspace FQDN for a notebook connection. Use that target’s workspace-specific DFS authority, constructed with its own compact GUID and prefix, rather than assuming the global authority works in every restricted case. Follow the <a href="https://learn.microsoft.com/en-us/fabric/security/security-workspace-private-links-example-notebook">restricted-target notebook example</a> and test the exact path under both policies. Do not mechanically rewrite unrelated local lakehouse paths; the attached-lakehouse relative path in this lab remains the simplest choice.</p>
+        <h3>Three data-movement cases that look similar but differ</h3>
+        <ul>
+          <li><strong>OneLake A → OneLake B server-side copy:</strong> the OneLake OAP article describes an outbound call from the source workspace to the target workspace. The source’s outbound exception must permit the target.</li>
+          <li><strong>Azure Storage → OneLake copy from URL:</strong> the destination OneLake workspace calls the source storage account. Its OAP rule must allow that source. Match Blob versus DFS connector rules to the actual endpoint family.</li>
+          <li><strong>OneLake → Azure Storage copy from URL:</strong> the destination storage service calls into OneLake. OAP on the source workspace does not block that inbound read. Inbound protection and authorization are essential.</li>
+        </ul>
+        <p>A caller with legitimate data access from an approved private client can also read data and send it elsewhere using that client’s own network. Workspace OAP is not a firewall on the VM, a clipboard policy, or a substitute for least privilege, sensitivity controls, endpoint protection, and auditing. This residual risk should appear in the threat model rather than being concealed by a “fully private” label. <a href="#s-onelake-oap">[14]</a></p>
+        <p>Shortcut chains are evaluated hop by hop: if A points to B and B points to C, permit A→B and B→C where required. An A→C permission does not repair a missing intermediate relationship. External ADLS/Blob shortcuts have the explicit MPE limitation already noted; separate Spark access to ADLS through an MPE is not evidence that the shortcut service uses the same route. This SQL-focused lab deploys no external Azure Storage account.</p>
+      </section>
+
+      <section id="troubleshooting">
+        <h2><span class="chapter">14 / Diagnose the failing layer</span>Do not solve every error by reopening public access</h2>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th scope="col">Layer / symptom</th><th scope="col">Inspect first</th><th scope="col">Safe next action</th></tr></thead>
+            <tbody>
+              <tr><td>Provisioning: ARM failed or resource absent</td><td>Deployment operations, exact resource failure, Azure Policy, quota, provider registration, regional support.</td><td>Correct the specific template/rule and complete missing resources. Preserve the failed deployment in the audit trail; do not call a submitted form “deployed.”</td></tr>
+              <tr><td>Feature setting absent</td><td>Workspace role, approved tenant feature gate and scope, actual F capacity assignment, supported item inventory.</td><td>Ask the appropriate administrator through the change process. Do not enable tenant-wide Private Link as a substitute for a workspace gate.</td></tr>
+              <tr><td>Workspace DNS public or NXDOMAIN</td><td>GUID hyphens, <code>z</code> prefix, first two characters, endpoint suffix, zone group, VNet link, custom DNS forwarder, cached answers.</td><td>Correct the resolver path and hostname. Compare the private and public client deliberately; do not add blanket hosts-file overrides.</td></tr>
+              <tr><td>PE/MPE Succeeded but cannot connect</td><td>Connection approval state separately from provisioning; correct SQL server resource and subresource.</td><td>Approve only the intended request, then refresh and retest. Succeeded/Pending is not equivalent to Succeeded/Approved.</td></tr>
+              <tr><td>TCP timeout</td><td>Route/NSG, service availability, target public access, private resolution, SQL connection policy; distinguish VM from Spark.</td><td>Validate the exact runtime path. A VM-side customer PE does not repair a missing Spark MPE.</td></tr>
+              <tr><td>TLS name mismatch</td><td>Raw IP or private alias in connection string, incorrect service hostname, certificate trust.</td><td>Use the documented normal hostname. Keep encryption and certificate validation enabled.</td></tr>
+              <tr><td>OneLake 401/403</td><td>Storage audience, token expiry, exact principal, workspace/item permission, GUID path, inbound policy.</td><td>Classify identity versus authorization versus network denial; refresh through the approved identity path without printing tokens.</td></tr>
+              <tr><td>SQL login or SELECT denied</td><td>Entra-only setup, contained user in the correct database, actual notebook execution identity, SELECT grant.</td><td>Grant the minimal object permission to the right principal. Do not enable SQL passwords or <code>db_owner</code> to bypass the diagnosis.</td></tr>
+              <tr><td>Baseline works; OAP notebook fails</td><td>Fresh-session DNS, MPE status, implicit package downloads, public OAuth calls, connector/runtime version.</td><td>Use the preinstalled connector; record exact authentication failure. This lab's scoped run passed, but repeat validation for your runtime, execution identity, and credential renewal.</td></tr>
+              <tr><td>Long first Spark startup</td><td>Managed VNet provisioning and cold custom pool; capacity availability/throttling.</td><td>Allow the documented startup interval and inspect the job state. Do not repeatedly submit duplicate jobs.</td></tr>
+              <tr><td>Policy apparently ignored</td><td>GET full policy, scope, propagation interval, reused connection, unsupported test operation, public IP exceptions.</td><td>Wait the documented interval, restart client/session, and retest a supported data-plane operation. Audit for accidental PUT default resets.</td></tr>
+              <tr><td>Pipeline fails despite SQL MPE</td><td>Data Factory connector/gateway rules, chosen connection runtime, activity/staging limitations.</td><td>Use the Data Factory branch. Do not treat Spark managed endpoints as universal integration runtime networking.</td></tr>
+              <tr><td>Cross-workspace path times out</td><td>GUID paths, A→B MPE/PLS approval, target inbound policy, source outbound policy, region/tenant support.</td><td>Validate each hop and data permission; friendly names and one workspace endpoint are not universal routes.</td></tr>
+              <tr><td>API throttling or concurrency failure</td><td><code>Retry-After</code>, latest ETag, concurrent administrator changes.</td><td>Use bounded backoff for throttling; GET and reconcile stale policy updates rather than forcing an overwrite.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p>Record the first failed layer before changing anything. If DNS resolves to the intended private endpoint but SQL reports an authorization error, network deployment is not the immediate problem. If OneLake reads work from the VM but Spark SQL fails, those are independent paths. If an operation succeeds only in an old session, do not mark the policy test passed; repeat from a new session and an independently verified client context.</p>
+      </section>
+
+      <section id="operations">
+        <h2><span class="chapter">15 / Operate with reversible boundaries</span>Rollout, rollback, and safe shutdown</h2>
+        <h3>Rollout gates</h3>
+        <p>Gate one is inventory and approval: supported items, paid F assignment, regional eligibility, two explicit tenant feature gates, and the allowed resource set. Gate two is private transport: customer PE and DNS, SQL public access disabled, MPE approved, and data authorization. Gate three is the observed baseline. Gate four is outbound Deny with a fresh positive SQL test and negative public test. Gate five is inbound Deny with private success and public failure. Production data should not enter the workspace before the intended enforcement and recovery gates pass.</p>
+        <p>For a new production design, prefer building approved exceptions and dependencies before onboarding workloads, rather than leaving public defaults open for an extended migration. The temporary Allow baseline here is solely for troubleshooting synthetic data in an isolated lab. Record the owner and deadline for removing that temporary state. Monitor capacity consumption while waiting for policy propagation; repeated idle sessions can outlive the actual tests.</p>
+        <h3>Rollback is not “set everything to Allow”</h3>
+        <ul>
+          <li>Retain the original full communication policy and exception-rule snapshots. On rollback, GET the current policy, reconcile concurrent edits, and conditionally restore only the approved change while preserving the other direction.</li>
+          <li>Keep the SQL server’s public network access Disabled. A Fabric issue is not authorization to reopen a database publicly.</li>
+          <li>If outbound Deny breaks an essential operation, pause the affected job and diagnose. Any temporary relaxation must be explicitly approved, narrow, time-bounded, and followed by the same negative tests.</li>
+          <li>Keep the documented admin recovery route available. Workspace policy API availability is scope-dependent; tenant public blocking has a much larger blast radius and is intentionally outside the main rollout.</li>
+          <li>Never remove unrelated endpoints, workspace items, tenant gates, or resource groups to “restore defaults.” Shared tenant settings need separate review and ownership even when the lab originally enabled them.</li>
+        </ul>
+        <h3>Cleanup in dependency order</h3>
+        <ol>
+          <li>Stop notebook sessions, scheduled jobs, and any new data writes. Export only sanitized evidence and confirm there are no business dependencies.</li>
+          <li>Remove temporary test role assignments and contained SQL test users when no longer needed. Delete only the disposable test data and dedicated items approved for cleanup.</li>
+          <li>Delete the lab Fabric MPE and verify its target-side connection is removed or disconnected. If recreating it later, respect the documented fifteen-minute wait.</li>
+          <li>Delete the dedicated workspace/items or retain them according to the approved plan. An active workspace Private Link Service can block workspace deletion: inspect the service response and plan removal of that service and its endpoint without losing the administration path. Any temporary network relaxation needs explicit approval and must be limited to the disposable workspace. Understand workspace soft-delete retention before assuming storage billing ends.</li>
+          <li>Pause or delete the dedicated F capacity only after dependent content is no longer needed. Verify the resulting state rather than assuming clicking Pause succeeded.</li>
+          <li>Remove only the customer lab resource group after reviewing its contents. Verify no dedicated Bastion, NAT gateway, public IP, private endpoint, SQL database, disk, or DNS zone remains billable.</li>
+          <li>Reconcile Azure Cost Management after billing latency and record residual retention or settlement charges. Do not promise a zero bill immediately after stopping compute.</li>
+        </ol>
+        <div class="callout" id="cleanup-result">
+          <p><strong>Observed cleanup:</strong> at 06:39:54 UTC on 27 September 2026, the dedicated workspace, Azure resource group, and new F4 capacity were verified absent. The pre-existing capacity remained Paused, the approved tenant feature gates remained unchanged, and the temporary local VM credential was removed. Evidence and recordings were retained. Deleted OneLake data retention and delayed billing can remain; permanent purge and final invoice settlement were not verified.</p>
+          <p><strong>Cleanup exception, not an acceptance result:</strong> a private workspace DELETE returned HTTP 400 because an active Private Link Service was still associated. Removing that service would remove the private administration route. The approved cleanup therefore temporarily changed <em>only the disposable workspace's inbound rule</em> to Allow at 06:20:23 UTC, preserved outbound Deny, removed its customer endpoint and Private Link Service, and deleted the workspace. The subsequent workspace read returned 404. The earlier both-Deny test remains a recorded historical result, not a claim that a now-deleted workspace is still protected.</p>
+        </div>
+        <figure class="evidence-slot" id="shot-15" data-evidence="screenshot-15">
+          <strong>Screenshot 15 · Cleanup verified; UI screenshot not captured</strong>
+          <p>The control-plane deletion and absence results are recorded in the private execution log and summarized above. No cleanup UI screenshot or zero-residual-billing assertion is supplied.</p>
+        </figure>
+      </section>
+
+      <section id="cost">
+        <h2><span class="chapter">16 / Budget the idle infrastructure too</span>Transparent planning arithmetic</h2>
+        <p>The following USD inputs were checked for this lab plan on 27 September 2026. They are planning rates, not a quote or invoice. Region, agreement, currency, tax, meter selection, and billed rounding can change the total. The Fabric F4 figure is a derivation from four capacity units at $0.19 per CU-hour, <strong>not a verified standalone F4 SKU quote</strong>. Use the <a href="https://prices.azure.com/api/retail/prices">Azure Retail Prices API</a>, your offer-specific calculator, and actual Cost Management records for reconciliation. <a href="#s-pricing">[24]</a></p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th scope="col">Component</th><th scope="col">Planning unit rate</th><th scope="col">Four-hour base estimate</th></tr></thead>
+            <tbody>
+              <tr><td>Fabric F4 compute</td><td>4 × $0.19 = $0.76/hour</td><td>$3.0400</td></tr>
+              <tr><td>Windows B2s VM</td><td>$0.0555/hour</td><td>$0.2220</td></tr>
+              <tr><td>E10 Standard SSD</td><td>$9.60/month</td><td>$0.0526, using a 730-hour planning month</td></tr>
+              <tr><td>Bastion Standard</td><td>$0.29/hour</td><td>$1.1600</td></tr>
+              <tr><td>NAT gateway</td><td>$0.045/hour + $0.045/GB processed</td><td>$0.1800 before data</td></tr>
+              <tr><td>Two public IPv4 addresses</td><td>2 × $0.005/hour</td><td>$0.0400</td></tr>
+              <tr><td>Two customer private endpoints</td><td>2 × $0.01/hour</td><td>$0.0800 before data processing</td></tr>
+              <tr><td>Private Link customer data processing</td><td>$0.01/GB first-tier ingress and egress</td><td>Meter actual applicable traffic; excluded from fixed subtotal</td></tr>
+              <tr><td>Two private DNS zones</td><td>2 × $0.50/month; $0.40/million queries</td><td>$0.0055 prorated planning amount, before queries</td></tr>
+              <tr><td>Azure SQL S0</td><td>$0.4839/day ≈ $0.0201625/hour</td><td>$0.0807</td></tr>
+              <tr><td>OneLake storage</td><td>$0.0269/GB-month</td><td>At 1 GB for four hours: about $0.00015</td></tr>
+              <tr><td>Fabric-managed SQL private endpoint</td><td>Do not assume the customer Azure PE meter applies identically.</td><td>Verify current Fabric billing treatment separately; not silently priced as a third customer PE.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <pre><code>Fixed/hourly planning subtotal:
+4 × (0.76 + 0.0555 + 0.29 + 0.045 + 2×0.005 + 2×0.01 + 0.4839/24)
+  + (9.60 + 2×0.50) × 4/730
+= approximately USD 4.86
+
+Add: metered traffic, DNS queries, OneLake, any applicable managed-endpoint
+billing, rounding, tax, and time spent provisioning/recording/retrying.
+
+Initial four-hour allowance: approximately USD 6.
+Approved contingency for the overall lab: USD 20, not an enforced hard cap.</code></pre>
+        <p>Monthly-rate prorating is an estimate, not a promise that every resource bills in four-hour fractions. A lab that runs twelve hours costs more than one planned for four, even if the useful notebook computation lasts only minutes. Bastion and NAT accrue while provisioned; deallocating the VM does not delete its disk, public IP resources, private endpoints, DNS zones, or SQL database. The customer PE count here is exactly two: VM→Fabric and VM→SQL. The separate Fabric-managed SQL endpoint remains separately accounted for.</p>
+        <p>Fabric pause stops normal active-capacity operation, but Microsoft documents settlement of remaining cumulative overages and smoothed operations onto the Azure bill when pausing. This can occur without intentionally enabling a paid overage feature. OneLake storage is separate from compute; deleted workspaces can retain data under the configured retention period, which can range from seven to ninety days. Check the actual setting and <a href="https://learn.microsoft.com/en-us/fabric/admin/portal-workspaces">workspace administration guidance</a> before claiming storage is gone. <a href="#s-pause">[22]</a></p>
+        <p>No reservations, autoscale, or paid overage expansion is part of this plan. A budget alert is not an automatic shutdown mechanism and the approved contingency is not a guaranteed spending ceiling. Set a manual stop time and verify cleanup rather than relying on the low volume of the three-row dataset.</p>
+      </section>
+
+      <section id="tenant">
+        <h2><span class="chapter">17 / Separate appendix, not the lab path</span>Tenant-level Private Link variant</h2>
+        <p>Use tenant-level Private Link only when a tenant-wide architecture and operating model require it. It changes a broader network boundary, includes services not covered by workspace-scoped APIs, and can affect management/recovery access. It is not a prerequisite for the workspace-only SQL lab. In the observed lab, tenant-level Private Link and tenant public blocking remain disabled. <a href="#s-tenant-overview">[1]</a></p>
+        <ol>
+          <li>Inventory tenant workloads, capacities, supported features, hybrid clients, DNS dependencies, and administrator recovery paths. Review the tenant-specific limitations rather than importing the workspace matrix.</li>
+          <li>Obtain separate change approval. In the Fabric admin portal, enable the tenant <strong>Azure Private Link</strong> setting. The setup guide describes approximately fifteen minutes to configure the tenant’s private service FQDNs.</li>
+          <li>Deploy <code>Microsoft.PowerBI/privateLinkServicesForPowerBI</code> with API version <code>2020-06-01</code>, <code>location: global</code> for the commercial-cloud example, and the tenant ID property. Keep the PowerBI resource namespace even though the product is Fabric.</li>
+          <li>Create the customer private endpoint to that resource. The portal displays the target subresource as <strong>Tenant</strong>; for automation, discover the private-link resource group ID and use the exact returned value, typically lowercase <code>tenant</code>, rather than copying UI casing.</li>
+          <li>Size the subnet for the documented tenant requirement: number of capacities plus fifteen addresses, in addition to sound subnet planning. Do not reuse the workspace “five current members, reserve ten” rule.</li>
+          <li>Integrate all three documented DNS zones: <code>privatelink.analysis.windows.net</code>, <code>privatelink.pbidedicated.windows.net</code>, and <code>privatelink.prod.powerquery.microsoft.com</code>. Validate tenant and capacity-dependent service resolution from each intended client network.</li>
+          <li>Prove private data and administration paths before separately enabling tenant <strong>Block public internet access</strong>. Retest management access and supported workload operations after propagation; keep a reviewed rollback path.</li>
+        </ol>
+        <pre><code>{
+  "type": "Microsoft.PowerBI/privateLinkServicesForPowerBI",
+  "apiVersion": "2020-06-01",
+  "name": "&lt;tenant-pls-name&gt;",
+  "location": "global",
+  "properties": {
+    "tenantId": "&lt;tenant-id&gt;"
+  }
+}</code></pre>
+        <p>The tenant and workspace DNS/service scopes can coexist, but coexistence does not collapse them into one policy. For a corresponding workspace, its workspace-specific private link can take precedence in resolution when both are present in the same VNet. Conversely, a workspace endpoint alone does not provide private access to tenant capacity-management resources. Use the documented control-plane access table when combining tenant public blocking with workspace Private Link. <a href="#s-workspace-overview">[3]</a> <a href="#s-workspace-setup">[4]</a></p>
+        <figure class="evidence-slot" id="shot-16" data-evidence="screenshot-16">
+          <strong>Screenshot 16 · Not captured; appendix not executed</strong>
+          <p>No tenant-level deployment or public-blocking evidence is claimed. The tenant-specific PLS, target group discovery, three DNS zones, and tenant-wide impact tests were not implemented in this lab.</p>
+        </figure>
+      </section>
+
+      <section id="evidence">
+        <h2><span class="chapter">18 / What actually happened</span>Execution evidence and recording ledger</h2>
+        <p>This ledger separates reported lab observations from attached evidence and assets still awaiting review. “Observed” means the execution result was recorded by the lab operator; it does not automatically mean its screenshot or video is attached. “Pending” means the acceptance test or public artifact is not complete. Original UI crops and recording-frame extracts are distinguished from Screenshot 02, which is a newly rendered historical evidence report. Revised screenshots use narrow light-gray identity masks and retain technical settings. Previously reviewed video excerpts retain their explicitly disclosed masks. Status indicators were not changed. Resource existence is not a declaration that all intended network restrictions passed.</p>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th scope="col">Checkpoint</th><th scope="col">Recorded outcome</th><th scope="col">Public artifact state</th></tr></thead>
+            <tbody>
+              <tr><td>Base customer infrastructure</td><td>New isolated resource group, VM, VNet, DNS, Bastion, NAT, and SQL administrative private path deployed. Initial ARM deployment failed on NSG platform-tag misuse; corrected IP rules and subsequent ARM work completed missing resources.</td><td><a href="#shot-02">Retained evidence view now included</a>, rendered after cleanup from saved verification records. It is not the missing original Azure portal screenshot.</td></tr>
+              <tr><td>Capacity and Fabric items</td><td>Dedicated F4 capacity, workspace, and lakehouse created. Portal capacity creation did not create the resource; later ARM deployment succeeded.</td><td><a href="#shot-03">Actual redacted setup forms attached</a>. ARM success, saved assignment, and completed item inventory images remain pending.</td></tr>
+              <tr><td>Endpoint inventory</td><td>Workspace PLS, customer Fabric PE and DNS deployed. Two customer PEs total: Fabric and SQL. One Fabric-managed SQL MPE.</td><td><a href="#shot-09">Actual SQL approval and Fabric Succeeded/Approved state attached</a>. Customer Fabric endpoint and DNS screenshots are not captured for this edition.</td></tr>
+              <tr><td>Azure Storage scope</td><td>No external Azure Storage account used after the outbound scenario changed to SQL. OneLake remains the Fabric destination.</td><td>No storage-account deployment claim.</td></tr>
+              <tr><td>Existing environment</td><td>Existing resources were left unchanged except two explicitly approved tenant feature gates for workspace inbound/outbound configuration. Tenant Private Link and tenant Block Public remain disabled.</td><td><a href="#shot-01">Actual gate ready/saved states and confirmation attached</a>. Old screenshots from a pre-existing lab workspace are deliberately excluded.</td></tr>
+              <tr><td>SQL seed and execution identity</td><td>Three synthetic rows seeded. Notebook ran as the SQL server's Entra administrator demo identity; SELECT-only-reader validation was not performed.</td><td>Observed; query-result screenshot not captured for this edition. Recommended least-privilege snippets are not claimed as executed.</td></tr>
+              <tr><td>VM → OneLake baseline</td><td>152 bytes, three data rows, private address resolution, VM system-assigned managed identity, successful readback, identical hash. Before inbound Deny.</td><td>Observed; baseline screenshot not captured for this edition.</td></tr>
+              <tr><td>Public client → OneLake baseline</td><td>Before inbound Deny, an authenticated public GET of the same test file returned HTTP 200 and 152 bytes using the same credentials intended for the later negative comparison.</td><td>Observed pass; baseline screenshot not captured for this edition. This is not an inbound-Deny acceptance result.</td></tr>
+              <tr><td>Spark → SQL → OneLake baseline</td><td>Execution API status Completed at 04:19:58 UTC on 27 September 2026; private SQL DNS/TCP, automatic-Entra <code>.mssql</code> three-row read, Delta write/read at <code>Files/sql-private-result</code>, and VM CSV three-row read all passed.</td><td>Observed; baseline screenshot not captured. Not evidence of OAP enforcement.</td></tr>
+              <tr><td>Outbound setting</td><td>UI shows Block outbound public access On and Git integration Off. Policy observation at 04:57:05 UTC: outbound Deny, inbound Allow.</td><td><a href="#shot-11">Actual recording-frame crop</a> and <a href="#video-outbound-setting">reviewed video excerpt</a> attached. Full-policy screenshot not captured.</td></tr>
+              <tr><td>Outbound Deny acceptance</td><td>Scoped strict pass: fresh job Completed from 05:19:15 to 05:22:42 UTC with no failure reason on reported runtime build <code>3.5.5.5.4.20260807.1</code>. Private SQL DNS/TCP, automatic-Entra three-row SQL read, and three-row Delta write/read passed. One unapproved destination, <code>www.microsoft.com:443</code>, failed with network unreachable.</td><td><a href="#strict-oap-result">Sanitized result summary attached</a>. Timestamped evidence retrieved privately and hash-verified; actual run screenshot not captured. No universal exfiltration claim.</td></tr>
+              <tr><td>Post-OAP policy check</td><td>At 05:22:52 UTC the full policy remained inbound Allow / outbound Deny. Inbound public access was still allowed throughout the strict OAP job.</td><td>Observed; full-policy screenshot not captured. No inbound-Deny pass.</td></tr>
+              <tr><td>Inbound Deny acceptance</td><td>Passed: public baseline HTTP 200/152 bytes, then HTTP 403 DeniedByPolicy after propagation; new private VM managed-identity upload/readback succeeded with 152 bytes and three rows. Final policy both Deny.</td><td><a href="#strict-inbound-result">Timestamped sanitized summary</a>, <a href="#shot-12">actual final recording frame</a>, and <a href="#video-validation">actual console video excerpt</a>.</td></tr>
+              <tr><td>Cleanup and final billing</td><td>At 06:39:54 UTC, active lab workspace, resource group and new F4 were verified absent; existing capacity and tenant settings were preserved. A documented lab-only inbound relaxation was required to remove its blocking PLS before workspace deletion.</td><td><a href="#cleanup-result">Sanitized cleanup result attached</a>. UI screenshot not captured. Retention purge and final billing settlement are not asserted.</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <h3>Actual screen recordings—not a simulated walkthrough</h3>
+        <p>The SQL-approval and outbound-configuration excerpts were re-encoded locally from actual timestamped browser screencast streams, not recreated from how-to screenshots. Every retained source frame of those two excerpts was privacy-reviewed; complete encoded files were decoded and representative encoded frames visually checked. Browser/account chrome and unrelated navigation are cropped out, identifying table fields are covered with opaque labeled masks, and source metadata/audio are excluded. In those two edited excerpts, loading sections are omitted, individual waits longer than five seconds are capped at five seconds, and the last actual frame is held for three seconds. Their added footer shows original source elapsed time. The third video is a separate real console recording with its own explicitly described cut. Statuses, buttons, and action order are not fabricated. Publication of the revised guide and these media was approved on 27 September 2026.</p>
+        <div class="cards">
+          <article class="card" id="video-capacity" data-evidence="video-capacity">
+            <h3>Chapter 1 · Capacity</h3>
+            <p><strong>Actual MP4 retained privately:</strong> approximately 12 minutes. The source contains identifying portal content and has not passed a complete-video privacy review. It is deliberately withheld; no playable file is linked. The failed portal creation attempt must not be relabeled as the later successful ARM deployment.</p>
+          </article>
+          <article class="card" id="video-workspace" data-evidence="video-workspace">
+            <h3>Chapter 2 · Workspace / lakehouse</h3>
+            <p><strong>Original recording lost</strong> after a browser failure. Reviewed form/selection screenshots are attached in <a href="#shot-03">chapter 6</a>, but they do not replace the missing action recording. No replacement video was captured for this edition.</p>
+          </article>
+          <article class="card video-card" id="video-sql" data-evidence="video-sql">
+            <h3>Chapter 3 · SQL approval</h3>
+            <figure class="video-figure">
+              <video class="evidence-video" controls preload="metadata" playsinline width="634" height="408" poster="assets/03-sql-approval-poster.png" aria-label="Actual SQL private connection approval, privacy-redacted edited recording" aria-describedby="sql-video-caption sql-video-transcript">
+                <source src="assets/03-sql-approval-redacted.mp4" type="video/mp4">
+                <track kind="captions" src="assets/03-sql-approval.en.vtt" srclang="en" label="English visual description">
+                Your browser does not support embedded video. <a href="assets/03-sql-approval-redacted.mp4">Download the reviewed SQL approval excerpt</a>.
+              </video>
+              <figcaption id="sql-video-caption">Actual capture, privacy-cropped and redacted; approximately 32 seconds, silent, with optional visual-description captions. Retains 24 captured frames from source 00:52.0–06:45.6; 324.5 seconds of long waits are removed. Opening navigation/loading and the final resized viewport frame are omitted. Connection identifiers and descriptions are masked in both table rows and the confirmation dialog; Pending/Approved states, selection, and Yes/No buttons remain unchanged. <a href="assets/03-sql-approval-redacted.mp4">Open the MP4</a>.</figcaption>
+            </figure>
+            <p id="sql-video-transcript"><strong>Text alternative:</strong> Azure SQL Private access initially shows the Fabric connection Pending while a separate customer PE is already Approved. The pending request is selected and the Approve connection dialog appears. After confirmation, the table remains Pending while the service processes the request, then changes to Approved. This records approval of the connection, not a SQL query, DNS test, or inbound-denial test. The brief dialog can be paused; the original wait duration must not be inferred from edited playback.</p>
+          </article>
+          <article class="card video-card" id="video-outbound-setting" data-evidence="video-outbound-setting">
+            <h3>Chapter 4 · Outbound configuration</h3>
+            <figure class="video-figure">
+              <video class="evidence-video" controls preload="metadata" playsinline width="606" height="670" poster="assets/04-outbound-protection-poster.png" aria-label="Actual outbound protection setting change, privacy-redacted edited recording" aria-describedby="outbound-video-caption outbound-video-transcript">
+                <source src="assets/04-outbound-protection-redacted.mp4" type="video/mp4">
+                <track kind="captions" src="assets/04-outbound-protection.en.vtt" srclang="en" label="English visual description">
+                Your browser does not support embedded video. <a href="assets/04-outbound-protection-redacted.mp4">Download the reviewed outbound configuration excerpt</a>.
+              </video>
+              <figcaption id="outbound-video-caption">Actual capture, privacy-cropped and redacted; approximately 31 seconds, silent, with optional visual-description captions. Retains all 48 captured frames from source 01:26.8–08:00.5; 366.2 seconds of long waits are removed. Opening workspace/navigation/loading footage is omitted. The lab MPE name is masked in normal settings frames; the confirmation-dialog frames contain no account or workspace identifier. Activation/approval states, warning, checkbox, Yes button, On/Off control states, and Git Off remain unchanged. <a href="assets/04-outbound-protection-redacted.mp4">Open the MP4</a>.</figcaption>
+            </figure>
+            <p id="outbound-video-transcript"><strong>Text alternative:</strong> Fabric Network security shows the SQL MPE Succeeded and Approved, with Block outbound public access initially Off. Changing the control displays a warning that certain artifacts cannot be created after blocking is enabled. The acknowledgment checkbox is selected and the confirmation is accepted. The final panel shows outbound blocking On and Git integration Off. The control can visually change before confirmation completes; do not infer enforcement from the toggle alone. This clip does not include the propagation wait or strict notebook test; that separate <a href="#strict-oap-result">scoped acceptance result</a> is documented above.</p>
+          </article>
+          <article class="card video-card" id="video-validation" data-evidence="video-validation">
+            <h3>Chapter 5 · Actual inbound enforcement test</h3>
+            <figure class="video-figure">
+              <video class="evidence-video" controls preload="metadata" playsinline width="960" height="480" poster="assets/16-inbound-final-actual-frame.png" aria-label="Actual private VM and public-client inbound enforcement test, recorded from a dedicated console" aria-describedby="inbound-video-caption inbound-video-transcript">
+                <source src="assets/05-inbound-console-excerpt.mp4" type="video/mp4">
+                <track kind="captions" src="assets/05-inbound-console.en.vtt" srclang="en" label="English visual description">
+                <a href="assets/05-inbound-console-excerpt.mp4">Download the actual console recording excerpt</a>.
+              </video>
+              <figcaption id="inbound-video-caption">Genuine window-only screen recording of the PowerShell test, not the Fabric portal. Silent, approximately 3 minutes 4 seconds. Source intervals 00:00–01:20 and 16:40–18:23.6 are retained at original speed; a 15-minute-20-second wait is omitted at playback 01:20. No output or success state was invented. The full 18-minute-24-second original remains in the private execution record.</figcaption>
+            </figure>
+            <p id="inbound-video-transcript"><strong>Text alternative:</strong> the console obtains an authenticated external baseline of HTTP 200 and 152 bytes, applies inbound Deny while preserving outbound Deny, then repeatedly observes HTTP 200 during propagation. After the disclosed cut, public access returns HTTP 403. A newly executed VM upload using managed identity succeeds and its readback matches. The final full policy is inbound Deny / outbound Deny. The closing SQL/OAP line summarizes an earlier verified job; this video does not record that notebook job being rerun.</p>
+          </article>
+        </div>
+        <h3>Publication and future updates</h3>
+        <p>This revised edition and its reviewed media were approved for public GitHub Pages publication on 27 September 2026. For future updates, replace evidence placeholders only with reviewed, sanitized assets; retain honest gaps where evidence does not exist. Update the ledger with observed outcomes, not expected results, and review the exact page and media before publication. This workshop is added separately without replacing the existing homepage or other workshops.</p>
+      </section>
+
+      <section id="sources">
+        <h2><span class="chapter">19 / Grounding and further reading</span>Official sources</h2>
+        <p>Microsoft Learn is the technical source of record. Initial research used ordinary web retrieval. In this revision, the official <code>https://learn.microsoft.com/api/mcp</code> endpoint was successfully used over Streamable HTTP: initialize, tool discovery, <code>microsoft_docs_search</code>, and <code>microsoft_docs_fetch</code> for both architecture overview pages. The returned server identified itself as Microsoft Learn MCP Server 1.0.0. <strong>WebIQ was not used.</strong> Source pages can change independently of this snapshot. When guidance differs by date or scope, consult the current operation-specific API contract and workload limitations before deployment. The diagram adapts the MCP-returned concepts using official service icons; it is not a claim that Microsoft reviewed this particular lab.</p>
+        <ol class="sources">
+          <li id="s-tenant-overview"><a href="https://learn.microsoft.com/en-us/fabric/security/security-private-links-overview">Private links for Fabric tenants</a> — tenant scope, architecture, and limitations.</li>
+          <li id="s-tenant-setup"><a href="https://learn.microsoft.com/en-us/fabric/security/security-private-links-use">Set up and use a tenant-level private link</a> — PowerBI resource namespace, target subresource, DNS, and sizing.</li>
+          <li id="s-workspace-overview"><a href="https://learn.microsoft.com/en-us/fabric/security/security-workspace-level-private-links-overview">Overview of workspace-level private links</a> — original architecture diagrams, FQDN algorithm, and resolution behavior.</li>
+          <li id="s-workspace-setup"><a href="https://learn.microsoft.com/en-us/fabric/security/security-workspace-level-private-links-set-up">Set up workspace-level private links</a> — F capacity, ARM resource, DNS, IP headroom, and inbound propagation.</li>
+          <li id="s-workspace-support"><a href="https://learn.microsoft.com/en-us/fabric/security/security-workspace-level-private-links-support">Supported workspace Private Link scenarios</a> — item/operation matrix, unsupported items, and control-plane exceptions.</li>
+          <li id="s-inbound-gate"><a href="https://learn.microsoft.com/en-us/fabric/security/security-workspace-enable-inbound-access-protection">Enable workspace inbound access protection for your tenant</a> — administrator feature gate.</li>
+          <li id="s-mpe-overview"><a href="https://learn.microsoft.com/en-us/fabric/security/security-managed-private-endpoints-overview">Managed private endpoint overview</a> — capacity/region requirements, supported workloads, deletion delay, and external shortcut limitation.</li>
+          <li id="s-mpe-create"><a href="https://learn.microsoft.com/en-us/fabric/security/security-managed-private-endpoints-create">Create and use managed private endpoints</a> — SQL request, approval, and supported target resource IDs.</li>
+          <li id="s-vnet"><a href="https://learn.microsoft.com/en-us/fabric/security/security-managed-vnets-fabric-overview">Managed virtual networks in Fabric</a> — Spark isolation, automatic provisioning, and cold-start considerations.</li>
+          <li id="s-oap-overview"><a href="https://learn.microsoft.com/en-us/fabric/security/workspace-outbound-access-protection-overview">Workspace outbound access protection overview</a> — scope matrix, capacities, connector granularity, and portal limitations.</li>
+          <li id="s-oap-setup"><a href="https://learn.microsoft.com/en-us/fabric/security/workspace-outbound-access-protection-set-up">Enable workspace outbound access protection</a> and <a href="https://learn.microsoft.com/en-us/fabric/security/workspace-outbound-access-protection-tenant-setting">tenant administrator setting</a> — configuration, propagation, and Git exception.</li>
+          <li id="s-oap-engineering"><a href="https://learn.microsoft.com/en-us/fabric/security/workspace-outbound-access-protection-data-engineering">OAP for Data Engineering</a> — MPE-only Spark exceptions, path semantics, and public authentication/package restrictions.</li>
+          <li id="s-connector"><a href="https://learn.microsoft.com/en-us/fabric/security/workspace-outbound-access-protection-allow-list-connector">Data connection allow rules</a> — cloud/gateway procedures and REST references.</li>
+          <li id="s-onelake-oap"><a href="https://learn.microsoft.com/en-us/fabric/security/workspace-outbound-access-protection-onelake">OAP for OneLake</a> — copy request direction, shortcut chains, external connector rules, and inbound GET limitation.</li>
+          <li id="s-oap-factory"><a href="https://learn.microsoft.com/en-us/fabric/security/workspace-outbound-access-protection-data-factory">OAP for Data Factory</a> — gateway and connector rules, activity and staging limitations.</li>
+          <li id="s-spark-sql"><a href="https://learn.microsoft.com/en-us/fabric/data-engineering/spark-sql-connector">Spark connector for SQL databases</a> — preinstalled connector, external Azure SQL support, automatic Entra, and explicit URL examples.</li>
+          <li id="s-notebook-credentials"><a href="https://learn.microsoft.com/en-us/fabric/data-engineering/notebookutils/notebookutils-credentials">NotebookUtils credentials</a> — documented token audiences and identity caveats.</li>
+          <li id="s-onelake-api"><a href="https://learn.microsoft.com/en-us/fabric/onelake/onelake-access-api">Connect to OneLake with APIs</a> — GUID paths, Storage token audience, workspace private FQDN, and DFS interoperability.</li>
+          <li id="s-regions"><a href="https://learn.microsoft.com/en-us/fabric/admin/region-availability">Fabric region availability</a> — verify both tenant home and capacity region eligibility.</li>
+          <li id="s-cross"><a href="https://learn.microsoft.com/en-us/fabric/security/security-cross-workspace-communication">Cross-workspace communication</a> — source/target endpoint and permission considerations.</li>
+          <li id="s-policy-api"><a href="https://learn.microsoft.com/en-us/rest/api/fabric/core/workspaces/set-network-communication-policy">Set Network Communication Policy</a> and <a href="https://learn.microsoft.com/en-us/rest/api/fabric/core/workspaces/get-network-communication-policy">Get Network Communication Policy</a> — replacement semantics, default Allow, Admin role, delegated scope, and ETag concurrency.</li>
+          <li id="s-pause"><a href="https://learn.microsoft.com/en-us/fabric/enterprise/pause-resume">Pause and resume Fabric capacity</a> — required actions, unavailability, and settlement of smoothed usage.</li>
+          <li id="s-mpe-api"><a href="https://learn.microsoft.com/en-us/rest/api/fabric/core/managed-private-endpoints/create-workspace-managed-private-endpoint">Create Workspace Managed Private Endpoint</a> — request schema, target <code>sqlServer</code>, supported identities, and independent states.</li>
+          <li id="s-pricing"><a href="https://learn.microsoft.com/en-us/rest/api/cost-management/retail-prices/azure-retail-prices">Azure Retail Prices API</a>; <a href="https://azure.microsoft.com/en-us/pricing/details/microsoft-fabric/">Fabric pricing</a>; <a href="https://azure.microsoft.com/en-us/pricing/details/private-link/">Private Link pricing</a>; <a href="https://azure.microsoft.com/en-us/pricing/details/azure-bastion/">Bastion pricing</a>; <a href="https://azure.microsoft.com/en-us/pricing/details/azure-nat-gateway/">NAT gateway pricing</a>; <a href="https://azure.microsoft.com/en-us/pricing/details/dns/">DNS pricing</a>; <a href="https://azure.microsoft.com/en-us/pricing/details/azure-sql-database/single/">Azure SQL Database pricing</a> — validate current meter and regional applicability before spending.</li>
+          <li id="s-mcp"><a href="https://learn.microsoft.com/en-us/training/support/mcp">Microsoft Learn MCP Server</a> and <a href="https://learn.microsoft.com/en-us/training/support/mcp-developer-reference">developer reference</a> — the official server used for this revision's architecture search and full-page retrieval. <a href="assets/mcp-architecture-provenance.json">Retrieval provenance</a>.</li>
+          <li id="s-icons"><a href="https://learn.microsoft.com/en-us/azure/architecture/icons/">Azure architecture icons</a> (official V24 pack) and <a href="https://learn.microsoft.com/en-us/fabric/fundamentals/icons">Fabric product/item icons</a> (official archive, package v6.1.0) — used unchanged for architecture/documentation as permitted. <a href="assets/icons/provenance.json">Icon source manifest</a>.</li>
+        </ol>
+      </section>
+    </main>
+  </div>
+  <footer>
+    <p>Microsoft Fabric private networking · L400 engineering field guide · 27 September 2026<br>Microsoft Learn MCP-grounded architecture with official service icons. Technical lab settings visible; identity fields selectively hidden. Reading this page performs no cloud operations.</p>
+    <a href="#guide">Back to guide</a>
+  </footer>
+</body>
+</html>
