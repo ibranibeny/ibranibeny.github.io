@@ -1,0 +1,251 @@
+[
+  {
+    "file": "01-home-region.png",
+    "caption": "01 | Confirm tenant home region",
+    "capturedAtUtc": "2026-09-27T12:22:50.945976+00:00",
+    "sourceKind": "Actual Azure/Fabric browser screenshot from approved rerun",
+    "originalCapture": "01-home-region.png",
+    "originalSha256": "9322505fcf5acf78f760d4a619ce10246642a07bc6dddf92c2037b9bb0c71961",
+    "edits": "Crop, added title strip, and listed narrow masks; no status or result altered.",
+    "maskedFields": [],
+    "width": 389,
+    "height": 97
+  },
+  {
+    "file": "02-vm-overview.png",
+    "caption": "02a | VM is running; primary NIC has no public IP",
+    "capturedAtUtc": "2026-09-27T14:33:04.139293+00:00",
+    "sourceKind": "Actual Azure/Fabric browser screenshot from approved rerun",
+    "originalCapture": "02-vm-overview.png",
+    "originalSha256": "a09c503959aa1d379ca4703b5e34ff5a8d20b9ce279f857117a08ca5d65b8eb6",
+    "edits": "Crop, added title strip, and listed narrow masks; no status or result altered.",
+    "maskedFields": [
+      "Subscription details hidden"
+    ],
+    "width": 1081,
+    "height": 295
+  },
+  {
+    "file": "02-vnet-subnets-full.png",
+    "caption": "02b | Separate client, endpoint and Bastion subnets",
+    "capturedAtUtc": "2026-09-27T14:36:25.036030+00:00",
+    "sourceKind": "Actual Azure/Fabric browser screenshot from approved rerun",
+    "originalCapture": "02-vnet-subnets-full.png",
+    "originalSha256": "2f0cd22e2e83e0f6c9269e7d545eb51e7220e41e288cace4f829ff1775ac7bb6",
+    "edits": "Crop, added title strip, and listed narrow masks; no status or result altered.",
+    "maskedFields": [],
+    "width": 1162,
+    "height": 546
+  },
+  {
+    "file": "03-workspace-assignment-saved.png",
+    "caption": "03 | Saved Fabric capacity assignment: F4",
+    "capturedAtUtc": "2026-09-27T13:09:48.878048+00:00",
+    "sourceKind": "Actual Azure/Fabric browser screenshot from approved rerun",
+    "originalCapture": "03-workspace-assignment-saved.png",
+    "originalSha256": "d78f9a9283a0b057aafda4f8caa3d641af185bd279e091c0047be0ecfa123fe9",
+    "edits": "Crop, added title strip, and listed narrow masks; no status or result altered.",
+    "maskedFields": [
+      "Capacity identifier hidden"
+    ],
+    "width": 595,
+    "height": 371
+  },
+  {
+    "file": "04-pls-provisioned.png",
+    "caption": "04 | Fabric workspace Private Link resource: Global and Succeeded",
+    "capturedAtUtc": "2026-09-27T15:03:13.411065+00:00",
+    "sourceKind": "Actual Azure/Fabric browser screenshot from approved rerun",
+    "originalCapture": "04-pls-provisioned.png",
+    "originalSha256": "e50238ddaa962cdd8c41294c81ff1ba5d82058b546174e911b3b8cf0b3d40a46",
+    "edits": "Crop, added title strip, and listed narrow masks; no status or result altered.",
+    "maskedFields": [
+      "Subscription details hidden",
+      "Resource identifier hidden",
+      "Tenant ID hidden"
+    ],
+    "width": 1165,
+    "height": 443
+  },
+  {
+    "file": "05-fabric-endpoint-approved.png",
+    "caption": "05a | Correct target workspace, private subnet, Approved connection",
+    "capturedAtUtc": "2026-09-27T15:04:10.113989+00:00",
+    "sourceKind": "Actual Azure/Fabric browser screenshot from approved rerun",
+    "originalCapture": "05-fabric-endpoint-approved.png",
+    "originalSha256": "8da00104ce3580b082727326a030eb7df062f0de665203434eadc8a217fa86af",
+    "edits": "Crop, added title strip, and listed narrow masks; no status or result altered.",
+    "maskedFields": [
+      "Subscription details hidden",
+      "Generated NIC ID hidden"
+    ],
+    "width": 1165,
+    "height": 296
+  },
+  {
+    "file": "05-fabric-dns-records.png",
+    "caption": "05b | Workspace DNS names resolve to customer private IP addresses",
+    "capturedAtUtc": "2026-09-27T15:05:04.245561+00:00",
+    "sourceKind": "Actual Azure/Fabric browser screenshot from approved rerun",
+    "originalCapture": "05-fabric-dns-records.png",
+    "originalSha256": "30b5d645557a937966a95ac04a1ea1bee6048dd05c3b86ad4adbd1451c54ea26",
+    "edits": "Crop, added title strip, and listed narrow masks; no status or result altered.",
+    "maskedFields": [
+      "ID hidden",
+      "Workspace ID hidden",
+      "Workspace ID hidden",
+      "Workspace ID hidden",
+      "Workspace ID hidden"
+    ],
+    "width": 1140,
+    "height": 462
+  },
+  {
+    "file": "05-dns-vnet-link.png",
+    "caption": "05c | Private DNS zone linked to the correct VNet; status Completed",
+    "capturedAtUtc": "2026-09-27T15:07:08.829750+00:00",
+    "sourceKind": "Actual Azure/Fabric browser screenshot from approved rerun",
+    "originalCapture": "05-dns-vnet-link.png",
+    "originalSha256": "8723d28c077ff4e5d142fa48e6234ab515b40fa4c459632499d0b868df763b9c",
+    "edits": "Crop, added title strip, and listed narrow masks; no status or result altered.",
+    "maskedFields": [],
+    "width": 1165,
+    "height": 238
+  },
+  {
+    "file": "06-vm-upload-readable-result.png",
+    "caption": "06 | Real VM upload and verified readback",
+    "capturedAtUtc": "2026-09-27T15:55:47.473402+00:00",
+    "sourceKind": "Actual Azure/Fabric browser screenshot from approved rerun",
+    "originalCapture": "06-vm-upload-readable-result.png",
+    "originalSha256": "c5299a5c1d63d62b73c650336825b4fdb13d85ebb29b7d11b7eddb14586ac687",
+    "edits": "Crop, added title strip, and listed narrow masks; no status or result altered.",
+    "maskedFields": [],
+    "width": 807,
+    "height": 266
+  },
+  {
+    "file": "07-sql-public-disabled.png",
+    "caption": "07a | SQL public network access is disabled",
+    "capturedAtUtc": "2026-09-27T14:30:59.119313+00:00",
+    "sourceKind": "Actual Azure/Fabric browser screenshot from approved rerun",
+    "originalCapture": "07-sql-public-disabled.png",
+    "originalSha256": "c703aa9611ba78f400292cf7501dbf4450b8ff03a2b263c34cf66961cc51c75a",
+    "edits": "Crop, added title strip, and listed narrow masks; no status or result altered.",
+    "maskedFields": [],
+    "width": 1155,
+    "height": 321
+  },
+  {
+    "file": "07-sql-private-approved.png",
+    "caption": "07b | Separate customer SQL private endpoint is approved",
+    "capturedAtUtc": "2026-09-27T14:31:00.167473+00:00",
+    "sourceKind": "Actual Azure/Fabric browser screenshot from approved rerun",
+    "originalCapture": "07-sql-private-approved.png",
+    "originalSha256": "d2532cade5cfd5e15022750b26adb1bcc5a8c72787ceaba51026d74a4e6689ec",
+    "edits": "Crop, added title strip, and listed narrow masks; no status or result altered.",
+    "maskedFields": [
+      "ID hidden"
+    ],
+    "width": 1155,
+    "height": 339
+  },
+  {
+    "file": "07-sql-entra-only-full.png",
+    "caption": "07c | Microsoft Entra-only authentication is enabled",
+    "capturedAtUtc": "2026-09-27T14:32:04.925107+00:00",
+    "sourceKind": "Actual Azure/Fabric browser screenshot from approved rerun",
+    "originalCapture": "07-sql-entra-only-full.png",
+    "originalSha256": "6ea300817718993d744a537354e784e8f0ed55ff709147083e123a193462dc62",
+    "edits": "Crop, added title strip, and listed narrow masks; no status or result altered.",
+    "maskedFields": [
+      "Administrator identity hidden"
+    ],
+    "width": 1156,
+    "height": 276
+  },
+  {
+    "file": "08-sql-three-rows.png",
+    "caption": "08 | SQL SELECT result: three synthetic rows",
+    "capturedAtUtc": "2026-09-27T14:35:09.776318+00:00",
+    "sourceKind": "Actual Azure/Fabric browser screenshot from approved rerun",
+    "originalCapture": "08-sql-three-rows.png",
+    "originalSha256": "dc4a2e4b8c047416e31140813c5e4921c830faf0ffb384e1a5f6bd2307e2a9ad",
+    "edits": "Crop, added title strip, and listed narrow masks; no status or result altered.",
+    "maskedFields": [],
+    "width": 825,
+    "height": 506
+  },
+  {
+    "file": "10-notebook-sql-three-rows.png",
+    "caption": "10a | Real Fabric notebook: private SQL query returns three rows",
+    "capturedAtUtc": "2026-09-27T15:54:43.376956+00:00",
+    "sourceKind": "Actual Azure/Fabric browser screenshot from approved rerun",
+    "originalCapture": "10-notebook-onelake-readback.png",
+    "originalSha256": "36a1e46ce44fa220f6da4545347da0b1ea8b4a7f7121dd4ea6c9b8314ce5d4b0",
+    "edits": "Crop, added title strip, and listed narrow masks; no status or result altered.",
+    "maskedFields": [
+      "user"
+    ],
+    "width": 965,
+    "height": 657
+  },
+  {
+    "file": "10-notebook-delta-output.png",
+    "caption": "10b | Real Fabric notebook: Delta data written to and read from OneLake",
+    "capturedAtUtc": "2026-09-27T15:57:48.549235+00:00",
+    "sourceKind": "Actual Azure/Fabric browser screenshot from approved rerun",
+    "originalCapture": "10-notebook-delta-output.png",
+    "originalSha256": "b76f7c9e0ab911c2f89917e4413ad9f27f86aa20bf42681d9fd6dc6d1f44d449",
+    "edits": "Crop, added title strip, and listed narrow masks; no status or result altered.",
+    "maskedFields": [
+      "Workspace/lakehouse IDs in destination URI hidden",
+      "user"
+    ],
+    "width": 965,
+    "height": 545
+  },
+  {
+    "file": "11-outbound-deny-mpe-approved.png",
+    "caption": "11 | Workspace outbound protection On; managed SQL endpoint Approved",
+    "capturedAtUtc": "2026-09-27T16:01:08.814616+00:00",
+    "sourceKind": "Actual Azure/Fabric browser screenshot from approved rerun",
+    "originalCapture": "11-outbound-deny-mpe-approved.png",
+    "originalSha256": "bebc1917976bac0580d8064a2823df6eafb981afce601068df0a19771cca1608",
+    "edits": "Crop, added title strip, and listed narrow masks; no status or result altered.",
+    "maskedFields": [],
+    "width": 942,
+    "height": 998
+  },
+  {
+    "file": "13-strict-oap-result.png",
+    "caption": "13 | Actual completed OAP run: private SQL works; public destination blocked",
+    "capturedAtUtc": "2026-09-27T15:52:29.115531+00:00",
+    "sourceKind": "Actual Azure/Fabric browser screenshot from approved rerun",
+    "originalCapture": "13-strict-oap-result.png",
+    "originalSha256": "681e6dd5a6c0a262db2d4a15177f696aac125ae506d3f155e64c1ab3e688b63b",
+    "edits": "Crop, added title strip, and listed narrow masks; no status or result altered.",
+    "maskedFields": [
+      "Notebook ID hidden",
+      "Job ID hidden"
+    ],
+    "width": 810,
+    "height": 404
+  },
+  {
+    "file": "15-cleanup-resource-not-found.png",
+    "caption": "15 | After cleanup: the lab resource group no longer exists",
+    "capturedAtUtc": "2026-09-27T16:24:53.348285+00:00",
+    "sourceKind": "Actual Azure/Fabric browser screenshot from approved rerun",
+    "originalCapture": "15-cleanup-resource-not-found.png",
+    "originalSha256": "ba80d8e58af551d6026bb9ee88f4c4f4ac2cf8f7e95f915caa05a32cfbe583aa",
+    "edits": "Crop, added title strip, and listed narrow masks; no status or result altered.",
+    "maskedFields": [
+      "Session ID hidden",
+      "Resource identifier hidden",
+      "Subscription ID hidden"
+    ],
+    "width": 735,
+    "height": 502
+  }
+]
